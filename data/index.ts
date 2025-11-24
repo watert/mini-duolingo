@@ -5,7 +5,7 @@ import * as Common from './pinyin-common';
 export const courseGroups: CourseGroup[] = [
   {
     id: 'grade-1',
-    title: '小学一年级',
+    title: '一年级(上)',
     courses: [
       {
         id: 'g1-unit1',
