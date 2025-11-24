@@ -1,5 +1,5 @@
 {
-  "name": "Pinyin Match Master",
+  "name": "Mini Duolingo Match Game for Pinyin",
   "description": "A Duolingo-style Pinyin matching game. Learn basic Chinese characters through interactive 4x4 matching exercises with spaced repetition for mistakes.",
   "requestFramePermissions": []
 }
