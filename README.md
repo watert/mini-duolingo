@@ -25,6 +25,13 @@
 - **数据持久化**: Browser LocalStorage API
 - **构建/运行**: ES Modules (无需构建工具即可在支持的环境运行)
 
+## 脚本
+
+```sh
+# deploy to ghpages
+yarn build --base=/mini-duolingo/ && npx gh-pages -d dist
+```
+
 ## 📂 项目结构
 
 ```text
