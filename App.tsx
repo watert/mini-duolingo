@@ -75,9 +75,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans text-gray-900 flex justify-center">
+    // changed min-h-screen to h-[100dvh] to fix mobile browser scroll issues
+    <div className="h-[100dvh] w-full bg-gray-100 font-sans text-gray-900 flex justify-center overflow-hidden">
       {/* Mobile container simulation */}
-      <div className="w-full max-w-md bg-white min-h-screen shadow-2xl relative overflow-hidden flex flex-col">
+      <div className="w-full max-w-md bg-white h-full shadow-2xl relative flex flex-col overflow-hidden">
         
         {view === 'menu' && (
           <CourseSelection 

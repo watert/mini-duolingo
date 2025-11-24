@@ -216,7 +216,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({ items, courseTitle, isMi
   
   return (
     <div className="flex flex-col h-full bg-white">
-      <div className="flex items-center justify-between px-4 pt-4">
+      <div className="flex items-center justify-between px-4 pt-4 shrink-0">
          <button onClick={onExit} className="text-gray-400 hover:text-gray-600 font-bold text-xl">
            ✕
          </button>
@@ -226,12 +226,12 @@ export const GameEngine: React.FC<GameEngineProps> = ({ items, courseTitle, isMi
       </div>
       
       {inRetryPhase && (
-        <div className="text-center text-orange-500 font-bold text-sm animate-pulse">
+        <div className="text-center text-orange-500 font-bold text-sm animate-pulse shrink-0">
           Reviewing mistakes...
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center">
+      <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center overscroll-contain">
         <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
           {currentCards.map(card => (
             <Card 

@@ -13,7 +13,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({ onSelectRecord, onBack
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
-      <div className="bg-white p-4 shadow-sm z-10 flex items-center border-b border-gray-200">
+      <div className="bg-white p-4 shadow-sm z-10 flex items-center border-b border-gray-200 shrink-0">
         <button onClick={onBack} className="mr-4 text-gray-500 hover:text-gray-800 text-xl font-bold">
           ←
         </button>
@@ -24,7 +24,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({ onSelectRecord, onBack
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 overscroll-contain">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
             <div className="text-4xl mb-2">📜</div>

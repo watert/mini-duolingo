@@ -41,14 +41,14 @@ export const SessionReport: React.FC<SessionReportProps> = ({ record, onClose })
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       {/* Header */}
-      <div className="bg-white p-4 shadow-sm z-10 flex items-center justify-between">
+      <div className="bg-white p-4 shadow-sm z-10 flex items-center justify-between shrink-0">
         <h2 className="text-lg font-bold text-gray-800">学习报告</h2>
         <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-sm font-bold">
           关闭
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 overscroll-contain">
         {/* Score Card */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center text-center">
           <div className="text-gray-400 text-sm font-medium mb-1">{record.courseTitle}</div>
@@ -114,7 +114,7 @@ export const SessionReport: React.FC<SessionReportProps> = ({ record, onClose })
       </div>
 
       {/* Footer Action */}
-      <div className="p-4 bg-white border-t border-gray-200">
+      <div className="p-4 bg-white border-t border-gray-200 shrink-0">
          <button 
            onClick={onClose}
            className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-transform"

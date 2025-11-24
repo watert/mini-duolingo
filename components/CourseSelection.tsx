@@ -17,9 +17,9 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
   const activeGroup = courseGroups.find(g => g.id === selectedGroupId) || courseGroups[0];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
-      <div className="bg-white p-6 border-b border-gray-200 shadow-sm sticky top-0 z-10 flex justify-between items-center">
+      <div className="bg-white p-6 border-b border-gray-200 shadow-sm sticky top-0 z-10 flex justify-between items-center shrink-0">
         <div className="space-y-1">
           <h1 className="text-2xl font-extrabold text-green-600 tracking-tight">
             Pinyin<span className="text-amber-500">Match</span>
@@ -36,7 +36,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
       </div>
 
       {/* Group Tabs */}
-      <div className="flex px-4 pt-4 space-x-2 overflow-x-auto no-scrollbar bg-white/50 backdrop-blur-sm sticky top-[88px] z-10 pb-2">
+      <div className="flex px-4 pt-4 space-x-2 overflow-x-auto no-scrollbar bg-white/50 backdrop-blur-sm sticky top-[88px] z-10 pb-2 shrink-0">
         {courseGroups.map(group => (
           <button
             key={group.id}
@@ -53,7 +53,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
       </div>
 
       {/* Course List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
         {/* Mistake Button (Always Visible at top if exists) */}
         {hasMistakes && (
           <button
