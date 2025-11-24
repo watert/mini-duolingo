@@ -1,11 +1,68 @@
-<div align="center">
+# 拼音配对大师 (Pinyin Match Master)
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+这是一个受多邻国（Duolingo）启发的拼音学习应用。通过互动式的 4x4 卡片配对游戏，帮助用户掌握汉字与拼音的对应关系。应用包含间隔重复（Spaced Repetition）机制，能够自动记录并强化练习错题。
 
-  <h1>Built with AI Studio</h2>
+## 🌟 功能特点
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- **游戏化配对体验**: 采用 4x4 网格的互动配对模式，将汉字与拼音一一对应。
+- **精心编排的课程**:
+  - **第一课**: 基础汉字 (覆盖 Level 1-4)，包含“天地人”、“你我他”等自然与人物基础词汇。
+  - **第二课**: 进阶基础，包含“手足”、“山川”、“数字”等。
+- **智能错题系统**:
+  - **自动记录**: 选错的配对会自动保存到浏览器的 LocalStorage 中。
+  - **即时重练**: 在当前课程结束前，会重新出现刚才做错的题目进行巩固。
+  - **专属错题本**: 当积累了错题后，主菜单会出现“错题练习”入口，专门针对薄弱环节进行特训。
+- **移动端优先设计**: 专为触屏优化，拥有舒适的点击区域和仿原生应用的交互反馈。桌面端访问时会以手机模拟器外壳展示。
+- **生动的视觉反馈**:
+  - 选中与匹配的平滑过渡动画。
+  - 答错时的“震动”反馈。
+  - 顶部的进度条显示当前学习进度。
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## 🛠 技术栈
 
-</div>
+- **核心框架**: React 19 (TypeScript)
+- **样式库**: Tailwind CSS
+- **数据持久化**: Browser LocalStorage API
+- **构建/运行**: ES Modules (无需构建工具即可在支持的环境运行)
+
+## 📂 项目结构
+
+```text
+.
+├── index.html               # 入口文件 (包含 Tailwind CDN)
+├── index.tsx                # React 根节点挂载
+├── App.tsx                  # 主应用路由与布局容器
+├── data.ts                  # 静态课程数据定义 (第一课、第二课)
+├── types.ts                 # TypeScript 类型定义 (PinyinItem, GameState)
+├── services/
+│   └── storage.ts           # LocalStorage 封装，用于管理错题
+└── components/
+    ├── CourseSelection.tsx  # 主菜单/课程选择界面
+    ├── GameEngine.tsx       # 核心游戏引擎 (配对逻辑、分组、重试机制)
+    ├── Card.tsx             # 单个卡片组件 (包含状态样式)
+    └── ProgressBar.tsx      # 进度条组件
+```
+
+## 📚 拼音难度分级体系
+
+本应用根据汉字与拼音的复杂度，将内容分为 7 个等级：
+
+| 等级 | 描述 | 示例 |
+|------|------|------|
+| **Lv 1** | 常见的声母和单韵母 | 巴 (bā)、路 (lù)、大 (dà) |
+| **Lv 2** | 复韵母或鼻韵母，声调组合 | 海 (hǎi)、春 (chūn)、装 (zhuāng) |
+| **Lv 3** | 涉及特殊规则或难点音节 | 居 (jū)、去 (qù)、训 (xùn) |
+| **Lv 4** | 整体认读音节 | 知 (zhī)、野 (yě)、圆 (yuán) |
+| **Lv 5** | 进阶/抽象词汇，高频双音节词 | 衡 (héng)、策 (cè) |
+| **Lv 6** | 多音字或多笔画的汉字 | 还 (huán)、略 (lüè) |
+| **Lv 7** | 生动/复杂字 | 御 (yù)、豁 (huò)、躁 (zào) |
+
+## 🚀 快速开始
+
+1. **数据定义**: 修改 `data.ts` 可以添加新的汉字数据，需遵循 `PinyinItem` 接口格式。
+2. **游戏逻辑**: `GameEngine` 组件负责将数据切分为 4x4 的分组，并处理匹配验证。
+3. **样式修改**: 所有样式均使用 Tailwind CSS 类名在组件内直接定义。
+
+## 💾 数据存储
+
+错题数据存储在浏览器的 `localStorage` 中，键名为 `pinyin_mistakes_v1`。这意味着用户关闭浏览器后再次回来，之前的错题记录依然存在，方便持续复习。
