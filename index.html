@@ -3,10 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="https://vitejs.dev/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Pinyin Match Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
 
+<style>
+  /* Fix for mobile scrolling behavior */
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden; /* Prevent global scroll */
+    overscroll-behavior: none; /* Prevent bounce effects on body */
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+  #root {
+    height: 100%;
+    width: 100%;
+  }
+</style>
   <script type="importmap">
 {
   "imports": {
@@ -16,7 +31,7 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/mini-duolingo/assets/index-CzBQHf_f.js"></script>
+  <script type="module" crossorigin src="/mini-duolingo/assets/index-BU4NcsAk.js"></script>
 </head>
   <body class="bg-gray-100">
     <div id="root"></div>
