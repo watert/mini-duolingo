@@ -43,7 +43,7 @@ export const SessionReport: React.FC<SessionReportProps> = ({ record, onClose })
       {/* Header */}
       <div className="bg-white p-4 shadow-sm z-10 flex items-center justify-between shrink-0">
         <h2 className="text-lg font-bold text-gray-800">学习报告</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-sm font-bold">
+        <button onClick={onClose} className="text-gray-500 active:text-gray-800 text-sm font-bold p-2">
           关闭
         </button>
       </div>

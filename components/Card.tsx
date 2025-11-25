@@ -7,9 +7,9 @@ interface CardProps {
 }
 
 export const Card: React.FC<CardProps> = ({ card, onClick }) => {
-  const baseClasses = "relative w-full aspect-[4/3] flex items-center justify-center text-xl font-bold rounded-2xl border-2 border-b-4 cursor-pointer transition-all duration-100 select-none active:border-b-2 active:translate-y-[2px]";
+  const baseClasses = "relative w-full aspect-[4/3] flex items-center justify-center text-xl font-bold rounded-2xl border-2 border-b-4 cursor-pointer transition-all duration-100 select-none active:border-b-2 active:translate-y-[2px] touch-manipulation";
   
-  let statusClasses = "bg-white border-gray-200 text-gray-700 hover:bg-gray-50";
+  let statusClasses = "bg-white border-gray-200 text-gray-700 active:bg-gray-50";
   
   if (card.status === 'selected') {
     statusClasses = "bg-sky-100 border-sky-400 text-sky-600 border-b-sky-400";

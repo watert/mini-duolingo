@@ -2,6 +2,7 @@ export interface PinyinItem {
   pinyin: string;
   word: string;
   level: number;
+  options?: string[]; // Distractors for multiple choice mode, length 3
 }
 
 export interface Course {

@@ -14,7 +14,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({ onSelectRecord, onBack
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
       <div className="bg-white p-4 shadow-sm z-10 flex items-center border-b border-gray-200 shrink-0">
-        <button onClick={onBack} className="mr-4 text-gray-500 hover:text-gray-800 text-xl font-bold">
+        <button onClick={onBack} className="mr-4 text-gray-500 active:text-gray-800 text-xl font-bold p-2">
           ←
         </button>
         <h2 className="text-lg font-bold text-gray-800">历史记录</h2>
@@ -37,7 +37,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({ onSelectRecord, onBack
               <button
                 key={record.id}
                 onClick={() => onSelectRecord(record)}
-                className="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-blue-300 transition-colors flex items-center justify-between text-left"
+                className="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-100 active:border-blue-300 transition-colors flex items-center justify-between text-left touch-manipulation active:bg-gray-50"
               >
                 <div className="flex-1">
                   <div className="font-bold text-gray-800 mb-1">{record.courseTitle}</div>

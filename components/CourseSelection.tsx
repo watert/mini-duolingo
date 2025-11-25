@@ -28,7 +28,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
         </div>
         <button 
           onClick={onHistorySelect}
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
+          className="p-2 text-gray-400 active:text-gray-600 active:bg-gray-100 rounded-full transition-all"
           title="历史记录"
         >
           <span className="text-2xl">📜</span>
@@ -44,7 +44,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
             className={`whitespace-nowrap px-6 py-2 rounded-full text-sm font-bold transition-all ${
               selectedGroupId === group.id
                 ? 'bg-green-600 text-white shadow-md scale-105'
-                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'
+                : 'bg-white text-gray-500 border border-gray-200 active:bg-gray-100'
             }`}
           >
             {group.title}
@@ -58,9 +58,9 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
         {hasMistakes && (
           <button
             onClick={onMistakeSelect}
-            className="w-full group relative flex items-center p-4 bg-white border-2 border-red-100 border-b-4 rounded-2xl hover:bg-red-50 hover:border-red-200 active:border-b-2 active:translate-y-[2px] transition-all mb-6"
+            className="w-full group relative flex items-center p-4 bg-white border-2 border-red-100 border-b-4 rounded-2xl active:bg-red-50 active:border-red-200 active:border-b-2 active:translate-y-[2px] transition-all mb-6 touch-manipulation"
           >
-             <div className="h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform shadow-sm">
+             <div className="h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl mr-4 active:scale-95 transition-transform shadow-sm">
                💔
             </div>
             <div className="text-left flex-1">
@@ -78,9 +78,9 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
             <button
               key={course.id}
               onClick={() => onSelect(course)}
-              className="w-full group relative flex items-center p-4 bg-white border-2 border-gray-100 border-b-4 rounded-2xl hover:bg-white hover:border-green-300 active:border-b-2 active:translate-y-[2px] transition-all"
+              className="w-full group relative flex items-center p-4 bg-white border-2 border-gray-100 border-b-4 rounded-2xl active:bg-white active:border-green-300 active:border-b-2 active:translate-y-[2px] transition-all touch-manipulation"
             >
-              <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-xl mr-4 font-bold shadow-sm transition-transform group-hover:scale-110 ${
+              <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-xl mr-4 font-bold shadow-sm transition-transform active:scale-95 ${
                 idx % 2 === 0 ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
               }`}>
                  {idx + 1}
@@ -89,7 +89,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
                 <h3 className="font-bold text-gray-800 text-lg">{course.title}</h3>
                 <p className="text-xs text-gray-400 font-medium line-clamp-1">{course.description}</p>
               </div>
-              <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:bg-green-50 group-hover:text-green-500 transition-colors">
+              <div className="h-8 w-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 active:bg-green-50 active:text-green-500 transition-colors">
                 ▶
               </div>
             </button>
