@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Course, CourseGroup } from '../types';
 import { courseGroups } from '../data/index';
 import { getMistakes } from '../services/storage';
@@ -9,10 +9,34 @@ interface CourseSelectionProps {
   onHistorySelect: () => void;
 }
 
+const STORAGE_KEY_GROUP = 'pinyin_selected_group_v1';
+
 export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMistakeSelect, onHistorySelect }) => {
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(courseGroups[0].id);
+  // Initialize state from localStorage or default to the first group
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_GROUP);
+      // Validate that the saved group ID actually exists in our current data
+      if (saved && courseGroups.some(g => g.id === saved)) {
+        return saved;
+      }
+    } catch (e) {
+      console.warn('Failed to read group selection from storage', e);
+    }
+    return courseGroups[0].id;
+  });
+
   const mistakes = getMistakes();
   const hasMistakes = mistakes.length > 0;
+
+  // Persist selection whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_GROUP, selectedGroupId);
+    } catch (e) {
+      console.warn('Failed to save group selection', e);
+    }
+  }, [selectedGroupId]);
 
   const activeGroup = courseGroups.find(g => g.id === selectedGroupId) || courseGroups[0];
 

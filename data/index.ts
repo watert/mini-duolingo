@@ -1,5 +1,6 @@
 import { CourseGroup } from '../types';
 import * as Grade1 from './pinyin-grade-1';
+import * as Grade1_2 from './pinyin-grade-1-2';
 import * as Common from './pinyin-common';
 
 export const courseGroups: CourseGroup[] = [
@@ -54,6 +55,60 @@ export const courseGroups: CourseGroup[] = [
         title: '第八单元',
         description: '比尾巴 综合拼音',
         data: Grade1.unit8
+      }
+    ]
+  },
+  {
+    id: 'grade-1-2',
+    title: '一年级(下)',
+    courses: [
+      {
+        id: 'g1-2-unit1',
+        title: '第一单元',
+        description: '春夏秋冬 姓氏歌',
+        data: Grade1_2.unit1
+      },
+      {
+        id: 'g1-2-unit2',
+        title: '第二单元',
+        description: '吃水不忘挖井人',
+        data: Grade1_2.unit2
+      },
+      {
+        id: 'g1-2-unit3',
+        title: '第三单元',
+        description: '小公鸡和小鸭子',
+        data: Grade1_2.unit3
+      },
+      {
+        id: 'g1-2-unit4',
+        title: '第四单元',
+        description: '静夜思 端午粽',
+        data: Grade1_2.unit4
+      },
+      {
+        id: 'g1-2-unit5',
+        title: '第五单元',
+        description: '动物儿歌 操场上',
+        data: Grade1_2.unit5
+      },
+      {
+        id: 'g1-2-unit6',
+        title: '第六单元',
+        description: '古诗二首 荷叶圆圆',
+        data: Grade1_2.unit6
+      },
+      {
+        id: 'g1-2-unit7',
+        title: '第七单元',
+        description: '文具的家 一分钟',
+        data: Grade1_2.unit7
+      },
+      {
+        id: 'g1-2-unit8',
+        title: '第八单元',
+        description: '棉花姑娘 小壁虎',
+        data: Grade1_2.unit8
       }
     ]
   },
