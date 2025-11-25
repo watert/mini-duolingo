@@ -1,8 +1,8 @@
-
 import React, { useEffect } from 'react';
 import { PinyinItem, SessionRecord } from '../types';
 import { ProgressBar } from './ProgressBar';
-import { saveSessionRecord } from '../services/storage';
+import { saveSessionRecord, saveMistake, removeMistake } from '../services/storage';
+import { playSelect, playMatch, playError, playWin } from '../services/sound';
 import { useGameStore } from '../store/gameStore';
 import { MatchView } from './MatchView';
 import { QuizView } from './QuizView';
@@ -24,6 +24,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({
 }) => {
   // Selectors
   const { 
+    // State
     queue, 
     currentGroupIndex, 
     inRetryPhase, 
@@ -31,10 +32,12 @@ export const GameEngine: React.FC<GameEngineProps> = ({
     mode,
     startTime,
     allMistakes,
+    
+    // Actions
     initGame,
     resetGame,
-    quizIndex,
-    quizQueue
+    recordMistake,
+    advanceRound
   } = useGameStore();
 
   // Initialize Game on Mount
@@ -48,6 +51,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({
   // Handle Game Completion
   useEffect(() => {
     if (status === 'completed') {
+      playWin();
       const endTime = Date.now();
       const record: SessionRecord = {
         id: `session-${endTime}`,
@@ -64,27 +68,38 @@ export const GameEngine: React.FC<GameEngineProps> = ({
     }
   }, [status, allMistakes, startTime, courseTitle, items.length, onComplete]);
 
+  // View Callbacks
+  const handleSuccess = (item: PinyinItem) => {
+    playMatch();
+    // If in mistake mode, remove from persistent storage
+    if (isMistakeMode) {
+      removeMistake(item.word);
+    }
+  };
+
+  const handleError = (item: PinyinItem) => {
+    playError();
+    playSelect(); // Feedback
+    saveMistake(item);
+    recordMistake(item);
+  };
+
+  const handleRoundComplete = () => {
+    advanceRound();
+  };
+
   // Calculate Progress
-  // Total steps is basically number of groups. 
-  // We can refine this to be specific items, but group based is fine for the bar.
   const totalGroups = queue.length;
   let progress = 0;
 
   if (inRetryPhase) {
     progress = 100;
   } else if (totalGroups > 0) {
-    // Base progress on groups
-    const baseProgress = (currentGroupIndex / totalGroups) * 100;
-    
-    // Add micro-progress for Quiz mode within a group
-    let microProgress = 0;
-    if (mode === 'quiz' && quizQueue.length > 0) {
-      const groupWeight = 100 / totalGroups;
-      microProgress = (quizIndex / quizQueue.length) * groupWeight;
-    }
-    
-    progress = Math.min(100, baseProgress + microProgress);
+    progress = (currentGroupIndex / totalGroups) * 100;
   }
+
+  // Get current data chunk
+  const currentItems = queue[currentGroupIndex] || [];
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -109,15 +124,29 @@ export const GameEngine: React.FC<GameEngineProps> = ({
         </div>
       )}
 
-      {/* Mode Indicator (Optional, debug friendly or for user context) */}
+      {/* Mode Indicator */}
       <div className="text-center mt-2 text-xs font-bold text-gray-300 uppercase tracking-widest">
         {mode === 'match' ? '配对' : '选择'}
       </div>
 
       {/* Game Content Router */}
       <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center overscroll-contain">
-        {status === 'playing' && (
-           mode === 'match' ? <MatchView /> : <QuizView />
+        {status === 'playing' && currentItems.length > 0 && (
+           mode === 'match' ? (
+             <MatchView 
+               items={currentItems}
+               onSuccess={handleSuccess}
+               onError={handleError}
+               onComplete={handleRoundComplete}
+             />
+           ) : (
+             <QuizView 
+               items={currentItems}
+               onSuccess={handleSuccess}
+               onError={handleError}
+               onComplete={handleRoundComplete}
+             />
+           )
         )}
       </div>
     </div>

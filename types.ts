@@ -22,10 +22,21 @@ export interface CourseGroup {
 export type CourseId = string;
 
 export interface GameState {
-  score: number;
-  mistakes: number;
-  completedPairs: number;
-  totalPairs: number;
+  // Session Progression
+  queue: PinyinItem[][]; 
+  currentGroupIndex: number;
+  
+  // Meta
+  courseTitle: string;
+  isMistakeMode: boolean;
+  inRetryPhase: boolean;
+  status: 'idle' | 'playing' | 'completed';
+  mode: GameMode;
+  startTime: number;
+
+  // Scoring/Tracking
+  sessionMistakes: PinyinItem[];
+  allMistakes: PinyinItem[];
 }
 
 export interface CardState {
@@ -48,11 +59,12 @@ export interface SessionRecord {
 
 export type GameMode = 'match' | 'quiz';
 
-export interface QuizState {
-  currentItem: PinyinItem | null;
-  currentOptions: string[]; // 4 options (1 correct + 3 distractors)
-  selectedOption: string | null; // The pinyin string selected by user
-  isCorrect: boolean | null; // null = pending, true = correct, false = wrong
-}
-
 export type ViewState = 'menu' | 'game' | 'report' | 'history' | 'history_report';
+
+// Props for the pure/smart components
+export interface GameViewProps {
+  items: PinyinItem[];
+  onSuccess: (item: PinyinItem) => void;
+  onError: (item: PinyinItem) => void;
+  onComplete: () => void;
+}

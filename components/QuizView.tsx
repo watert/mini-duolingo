@@ -1,11 +1,67 @@
+import React, { useState, useEffect } from 'react';
+import { GameViewProps } from '../types';
+import { generateQuizOptions } from '../store/quizLogic';
 
-import React from 'react';
-import { useGameStore } from '../store/gameStore';
+export const QuizView: React.FC<GameViewProps> = ({ items, onSuccess, onError, onComplete }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentOptions, setCurrentOptions] = useState<string[]>([]);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-export const QuizView: React.FC = () => {
-  const { quizState, submitQuizAnswer } = useGameStore();
-  const { currentItem, currentOptions, selectedOption, isCorrect } = quizState;
+  // Initialize first question or reset when items change
+  useEffect(() => {
+    setCurrentIndex(0);
+    setSelectedOption(null);
+    setIsCorrect(null);
+    setIsProcessing(false);
+    
+    if (items.length > 0) {
+      setCurrentOptions(generateQuizOptions(items[0]));
+    }
+  }, [items]);
 
+  const handleOptionSelect = (option: string) => {
+    if (isProcessing || selectedOption) return;
+
+    const currentItem = items[currentIndex];
+    const correct = option === currentItem.pinyin;
+
+    setSelectedOption(option);
+    setIsCorrect(correct);
+    setIsProcessing(true);
+
+    if (correct) {
+      onSuccess(currentItem);
+      
+      // Delay before next question
+      setTimeout(() => {
+        const nextIdx = currentIndex + 1;
+        if (nextIdx < items.length) {
+          // Next Question
+          setCurrentIndex(nextIdx);
+          setCurrentOptions(generateQuizOptions(items[nextIdx]));
+          setSelectedOption(null);
+          setIsCorrect(null);
+          setIsProcessing(false);
+        } else {
+          // Finished
+          onComplete();
+        }
+      }, 1000);
+    } else {
+      onError(currentItem);
+      
+      // Allow retry after short delay, but keep processing true briefly to show error
+      setTimeout(() => {
+        setSelectedOption(null);
+        setIsCorrect(null);
+        setIsProcessing(false);
+      }, 1000);
+    }
+  };
+
+  const currentItem = items[currentIndex];
   if (!currentItem) return null;
 
   return (
@@ -39,8 +95,8 @@ export const QuizView: React.FC = () => {
           return (
             <button
               key={idx}
-              onClick={() => !selectedOption && submitQuizAnswer(option)}
-              disabled={!!selectedOption}
+              onClick={() => handleOptionSelect(option)}
+              disabled={isProcessing || !!selectedOption}
               className={`
                 w-full p-4 rounded-xl border-2 border-b-4 text-xl font-bold transition-all
                 ${btnClass}
@@ -50,6 +106,16 @@ export const QuizView: React.FC = () => {
             </button>
           );
         })}
+      </div>
+      
+      {/* Progress within quiz group */}
+      <div className="mt-6 flex space-x-2">
+        {items.map((_, i) => (
+          <div 
+            key={i} 
+            className={`h-2 w-2 rounded-full ${i === currentIndex ? 'bg-gray-400' : i < currentIndex ? 'bg-green-400' : 'bg-gray-200'}`}
+          />
+        ))}
       </div>
     </div>
   );
