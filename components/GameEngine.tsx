@@ -1,9 +1,11 @@
+
 import React, { useEffect } from 'react';
 import { PinyinItem, SessionRecord } from '../types';
-import { Card } from './Card';
 import { ProgressBar } from './ProgressBar';
 import { saveSessionRecord } from '../services/storage';
 import { useGameStore } from '../store/gameStore';
+import { MatchView } from './MatchView';
+import { QuizView } from './QuizView';
 
 interface GameEngineProps {
   items: PinyinItem[];
@@ -22,19 +24,20 @@ export const GameEngine: React.FC<GameEngineProps> = ({
 }) => {
   // Selectors
   const { 
-    currentCards, 
     queue, 
     currentGroupIndex, 
     inRetryPhase, 
     status,
+    mode,
     startTime,
     allMistakes,
     initGame,
-    selectCard,
-    resetGame
+    resetGame,
+    quizIndex,
+    quizQueue
   } = useGameStore();
 
-  // Initialize Game on Mount or Items Change
+  // Initialize Game on Mount
   useEffect(() => {
     initGame(items, courseTitle, isMistakeMode);
     return () => {
@@ -52,7 +55,7 @@ export const GameEngine: React.FC<GameEngineProps> = ({
         startTime: startTime,
         endTime: endTime,
         duration: endTime - startTime,
-        totalItems: items.length, // approximation based on input
+        totalItems: items.length, 
         mistakes: allMistakes
       };
       
@@ -62,11 +65,26 @@ export const GameEngine: React.FC<GameEngineProps> = ({
   }, [status, allMistakes, startTime, courseTitle, items.length, onComplete]);
 
   // Calculate Progress
-  const totalSteps = queue.length;
-  // If in retry phase, show 100%, otherwise calculate normally
-  const progress = inRetryPhase 
-    ? 100 
-    : totalSteps > 0 ? (currentGroupIndex / totalSteps) * 100 : 0;
+  // Total steps is basically number of groups. 
+  // We can refine this to be specific items, but group based is fine for the bar.
+  const totalGroups = queue.length;
+  let progress = 0;
+
+  if (inRetryPhase) {
+    progress = 100;
+  } else if (totalGroups > 0) {
+    // Base progress on groups
+    const baseProgress = (currentGroupIndex / totalGroups) * 100;
+    
+    // Add micro-progress for Quiz mode within a group
+    let microProgress = 0;
+    if (mode === 'quiz' && quizQueue.length > 0) {
+      const groupWeight = 100 / totalGroups;
+      microProgress = (quizIndex / quizQueue.length) * groupWeight;
+    }
+    
+    progress = Math.min(100, baseProgress + microProgress);
+  }
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -91,17 +109,16 @@ export const GameEngine: React.FC<GameEngineProps> = ({
         </div>
       )}
 
-      {/* Game Grid */}
+      {/* Mode Indicator (Optional, debug friendly or for user context) */}
+      <div className="text-center mt-2 text-xs font-bold text-gray-300 uppercase tracking-widest">
+        {mode === 'match' ? '配对' : '选择'}
+      </div>
+
+      {/* Game Content Router */}
       <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center overscroll-contain">
-        <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-          {currentCards.map(card => (
-            <Card 
-              key={card.id} 
-              card={card} 
-              onClick={() => selectCard(card.id)} 
-            />
-          ))}
-        </div>
+        {status === 'playing' && (
+           mode === 'match' ? <MatchView /> : <QuizView />
+        )}
       </div>
     </div>
   );

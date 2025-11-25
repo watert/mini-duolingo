@@ -1,3 +1,4 @@
+
 export interface PinyinItem {
   pinyin: string;
   word: string;
@@ -44,3 +45,14 @@ export interface SessionRecord {
   totalItems: number;
   mistakes: PinyinItem[]; // List of items missed at least once
 }
+
+export type GameMode = 'match' | 'quiz';
+
+export interface QuizState {
+  currentItem: PinyinItem | null;
+  currentOptions: string[]; // 4 options (1 correct + 3 distractors)
+  selectedOption: string | null; // The pinyin string selected by user
+  isCorrect: boolean | null; // null = pending, true = correct, false = wrong
+}
+
+export type ViewState = 'menu' | 'game' | 'report' | 'history' | 'history_report';

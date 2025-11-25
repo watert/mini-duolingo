@@ -1,78 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { CourseSelection } from './components/CourseSelection';
 import { GameEngine } from './components/GameEngine';
 import { HistoryList } from './components/HistoryList';
 import { SessionReport } from './components/SessionReport';
-import { Course, PinyinItem, SessionRecord } from './types';
-import { getMistakes } from './services/storage';
-
-type ViewState = 'menu' | 'game' | 'report' | 'history' | 'history_report';
-
-// Helper to pick random 20 items
-const selectSessionItems = (allItems: PinyinItem[], count: number = 20): PinyinItem[] => {
-  if (allItems.length === 0) return [];
-  
-  let pool = [...allItems];
-  
-  // If not enough items, repeat them until we have enough
-  while (pool.length < count) {
-    pool = [...pool, ...allItems];
-  }
-
-  // Shuffle
-  pool.sort(() => Math.random() - 0.5);
-
-  // Return exact count
-  return pool.slice(0, count);
-};
+import { useSessionStore } from './store/sessionStore';
 
 export default function App() {
-  const [view, setView] = useState<ViewState>('menu');
-  const [activeItems, setActiveItems] = useState<PinyinItem[]>([]);
-  const [activeCourseTitle, setActiveCourseTitle] = useState("");
-  const [isMistakeMode, setIsMistakeMode] = useState(false);
-  const [lastSessionRecord, setLastSessionRecord] = useState<SessionRecord | null>(null);
-
-  const handleStartCourse = (course: Course) => {
-    // Pick random 20 items for this session
-    const sessionItems = selectSessionItems(course.data, 20);
-    
-    if (sessionItems.length > 0) {
-      setActiveItems(sessionItems);
-      setActiveCourseTitle(course.title);
-      setIsMistakeMode(false);
-      setView('game');
-    }
-  };
-
-  const handleStartMistakes = () => {
-    const mistakes = getMistakes();
-    if (mistakes.length > 0) {
-      const sessionItems = selectSessionItems(mistakes, 20);
-      setActiveItems(sessionItems);
-      setActiveCourseTitle("错题练习");
-      setIsMistakeMode(true);
-      setView('game');
-    }
-  }
-
-  const handleGameComplete = (record: SessionRecord) => {
-    setLastSessionRecord(record);
-    setView('report');
-  };
-
-  const handleExit = () => {
-    setView('menu');
-  };
-
-  const handleShowHistory = () => {
-    setView('history');
-  };
-
-  const handleSelectHistoryRecord = (record: SessionRecord) => {
-    setLastSessionRecord(record);
-    setView('history_report');
-  };
+  const { 
+    view, 
+    activeItems, 
+    activeCourseTitle, 
+    isMistakeMode, 
+    lastSessionRecord,
+    startCourse,
+    startMistakeSession,
+    completeSession,
+    exitGame,
+    showHistory,
+    selectHistoryRecord,
+    setView
+  } = useSessionStore();
 
   return (
     // changed min-h-screen to h-[100dvh] to fix mobile browser scroll issues
@@ -82,16 +29,16 @@ export default function App() {
         
         {view === 'menu' && (
           <CourseSelection 
-            onSelect={handleStartCourse} 
-            onMistakeSelect={handleStartMistakes}
-            onHistorySelect={handleShowHistory}
+            onSelect={startCourse} 
+            onMistakeSelect={startMistakeSession}
+            onHistorySelect={showHistory}
           />
         )}
 
         {view === 'history' && (
           <HistoryList 
             onBack={() => setView('menu')}
-            onSelectRecord={handleSelectHistoryRecord}
+            onSelectRecord={selectHistoryRecord}
           />
         )}
 
@@ -100,8 +47,8 @@ export default function App() {
             items={activeItems} 
             courseTitle={activeCourseTitle}
             isMistakeMode={isMistakeMode}
-            onComplete={handleGameComplete} 
-            onExit={handleExit}
+            onComplete={completeSession} 
+            onExit={exitGame}
           />
         )}
 
