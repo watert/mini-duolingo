@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from './Card';
 import { CardState, GameViewProps } from '../types';
@@ -37,11 +38,12 @@ export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, 
     // Visually select second card
     setCards(prev => prev.map(c => c.id === clickedId ? { ...c, status: 'selected' } : c));
 
-    const isMatch = firstCard.word === clickedCard.word;
+    // Match based on the question ID (which is derived from 'question' in cardLogic)
+    const isMatch = firstCard.question === clickedCard.question;
 
     if (isMatch) {
       // Logic Success
-      const matchedItem = items.find(i => i.word === firstCard.word);
+      const matchedItem = items.find(i => i.question === firstCard.question);
       if (matchedItem) onSuccess(matchedItem);
 
       setTimeout(() => {
@@ -56,7 +58,7 @@ export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, 
           if (remaining.length === 0) {
             onComplete();
           }
-          return newCards as CardState[]; // cast to satisfy TS strictness if needed
+          return newCards as CardState[];
         });
         
         setSelectedCardId(null);
@@ -65,7 +67,7 @@ export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, 
 
     } else {
       // Logic Error
-      const mistakeItem = items.find(i => i.word === firstCard.word || i.word === clickedCard.word);
+      const mistakeItem = items.find(i => i.question === firstCard.question || i.question === clickedCard.question);
       if (mistakeItem) onError(mistakeItem);
 
       setTimeout(() => {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GameViewProps } from '../types';
 import { generateQuizOptions } from '../store/quizLogic';
@@ -25,7 +26,7 @@ export const QuizView: React.FC<GameViewProps> = ({ items, onSuccess, onError, o
     if (isProcessing || selectedOption) return;
 
     const currentItem = items[currentIndex];
-    const correct = option === currentItem.pinyin;
+    const correct = option === currentItem.answer;
 
     setSelectedOption(option);
     setIsCorrect(correct);
@@ -66,9 +67,9 @@ export const QuizView: React.FC<GameViewProps> = ({ items, onSuccess, onError, o
 
   return (
     <div className="w-full max-w-sm flex flex-col items-center animate-fade-in">
-      {/* Question Card (Hanzi) */}
+      {/* Question Card */}
       <div className="w-full aspect-[2/1] bg-white border-2 border-b-4 border-gray-200 rounded-3xl flex items-center justify-center mb-8 shadow-sm">
-        <span className="text-6xl font-black text-gray-800">{currentItem.word}</span>
+        <span className="text-6xl font-black text-gray-800">{currentItem.question}</span>
       </div>
 
       {/* Options Grid */}
@@ -77,7 +78,7 @@ export const QuizView: React.FC<GameViewProps> = ({ items, onSuccess, onError, o
           let btnClass = "bg-white border-gray-200 text-gray-600 active:border-b-2 active:translate-y-[2px]";
           
           if (selectedOption) {
-            if (option === currentItem.pinyin) {
+            if (option === currentItem.answer) {
               // This is the correct answer
               if (selectedOption === option || (selectedOption !== option && isCorrect === false && selectedOption)) {
                  // Show correct in green if user picked it OR if user picked wrong (reveal answer)

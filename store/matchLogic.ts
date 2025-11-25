@@ -1,33 +1,33 @@
 
-import { PinyinItem, CardState } from '../types';
+import { QuizItem, CardState } from '../types';
 
-export const generateCardsForGroup = (group: PinyinItem[]): CardState[] => {
-  // Create Hanzi Cards
-  const wordCards: CardState[] = group.map(item => ({
-    id: `hanzi-${item.word}-${item.pinyin}`,
-    word: item.word,
-    display: item.word,
-    type: 'hanzi',
+export const generateCardsForGroup = (group: QuizItem[]): CardState[] => {
+  // Create Question Cards (formerly Hanzi)
+  const questionCards: CardState[] = group.map(item => ({
+    id: `q-${item.question}-${item.answer}`,
+    question: item.question,
+    display: item.question,
+    type: 'question',
     status: 'idle'
   }));
 
-  // Create Pinyin Cards
-  const pinyinCards: CardState[] = group.map(item => ({
-    id: `pinyin-${item.word}-${item.pinyin}`,
-    word: item.word,
-    display: item.pinyin,
-    type: 'pinyin',
+  // Create Answer Cards (formerly Pinyin)
+  const answerCards: CardState[] = group.map(item => ({
+    id: `a-${item.question}-${item.answer}`,
+    question: item.question,
+    display: item.answer,
+    type: 'answer',
     status: 'idle'
   }));
 
   // Shuffle independently
-  const shuffledWords = [...wordCards].sort(() => Math.random() - 0.5);
-  const shuffledPinyins = [...pinyinCards].sort(() => Math.random() - 0.5);
+  const shuffledQuestions = [...questionCards].sort(() => Math.random() - 0.5);
+  const shuffledAnswers = [...answerCards].sort(() => Math.random() - 0.5);
 
-  // Randomize column layout (Words on left OR Pinyin on left)
-  const wordsOnLeft = Math.random() > 0.5;
-  const leftCol = wordsOnLeft ? shuffledWords : shuffledPinyins;
-  const rightCol = wordsOnLeft ? shuffledPinyins : shuffledWords;
+  // Randomize column layout (Questions on left OR Answers on left)
+  const questionsOnLeft = Math.random() > 0.5;
+  const leftCol = questionsOnLeft ? shuffledQuestions : shuffledAnswers;
+  const rightCol = questionsOnLeft ? shuffledAnswers : shuffledQuestions;
 
   // Interleave for display grid
   const combinedCards: CardState[] = [];

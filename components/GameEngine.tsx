@@ -1,30 +1,30 @@
+
 import React, { useEffect } from 'react';
-import { PinyinItem, SessionRecord } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { QuizItem, SessionRecord } from '../types';
 import { ProgressBar } from './ProgressBar';
 import { saveSessionRecord, saveMistake, removeMistake } from '../services/storage';
 import { playSelect, playMatch, playError, playWin } from '../services/sound';
 import { useGameStore } from '../store/gameStore';
+import { useSessionStore } from '../store/sessionStore';
 import { MatchView } from './MatchView';
 import { QuizView } from './QuizView';
 
-interface GameEngineProps {
-  items: PinyinItem[];
-  courseTitle: string;
-  isMistakeMode?: boolean;
-  onComplete: (record: SessionRecord) => void;
-  onExit: () => void;
-}
+export const GameEngine: React.FC = () => {
+  const navigate = useNavigate();
+  
+  // Session Data from Store
+  const { activeItems, activeCourseTitle, isMistakeMode, completeSession } = useSessionStore();
 
-export const GameEngine: React.FC<GameEngineProps> = ({ 
-  items, 
-  courseTitle, 
-  isMistakeMode = false, 
-  onComplete, 
-  onExit 
-}) => {
-  // Selectors
+  // Redirect if no items (e.g. refresh)
+  useEffect(() => {
+    if (!activeItems || activeItems.length === 0) {
+      navigate('/', { replace: true });
+    }
+  }, [activeItems, navigate]);
+
+  // Game Engine State & Actions
   const { 
-    // State
     queue, 
     currentGroupIndex, 
     inRetryPhase, 
@@ -33,20 +33,21 @@ export const GameEngine: React.FC<GameEngineProps> = ({
     startTime,
     allMistakes,
     
-    // Actions
     initGame,
     resetGame,
     recordMistake,
     advanceRound
   } = useGameStore();
 
-  // Initialize Game on Mount
+  // Initialize Game
   useEffect(() => {
-    initGame(items, courseTitle, isMistakeMode);
+    if (activeItems.length > 0) {
+      initGame(activeItems, activeCourseTitle, isMistakeMode);
+    }
     return () => {
       resetGame();
     };
-  }, [items, courseTitle, isMistakeMode]);
+  }, [activeItems, activeCourseTitle, isMistakeMode, initGame, resetGame]);
 
   // Handle Game Completion
   useEffect(() => {
@@ -55,31 +56,36 @@ export const GameEngine: React.FC<GameEngineProps> = ({
       const endTime = Date.now();
       const record: SessionRecord = {
         id: `session-${endTime}`,
-        courseTitle: courseTitle,
+        courseTitle: activeCourseTitle,
         startTime: startTime,
         endTime: endTime,
         duration: endTime - startTime,
-        totalItems: items.length, 
+        totalItems: activeItems.length, 
         mistakes: allMistakes
       };
       
       saveSessionRecord(record);
-      onComplete(record);
+      completeSession(record);
+      // Navigate to report, replacing the game route so back button goes to menu
+      navigate('/report', { replace: true });
     }
-  }, [status, allMistakes, startTime, courseTitle, items.length, onComplete]);
+  }, [status, allMistakes, startTime, activeCourseTitle, activeItems.length, completeSession, navigate]);
+
+  const handleExit = () => {
+    navigate('/');
+  };
 
   // View Callbacks
-  const handleSuccess = (item: PinyinItem) => {
+  const handleSuccess = (item: QuizItem) => {
     playMatch();
-    // If in mistake mode, remove from persistent storage
     if (isMistakeMode) {
-      removeMistake(item.word);
+      removeMistake(item.question);
     }
   };
 
-  const handleError = (item: PinyinItem) => {
+  const handleError = (item: QuizItem) => {
     playError();
-    playSelect(); // Feedback
+    playSelect();
     saveMistake(item);
     recordMistake(item);
   };
@@ -101,12 +107,14 @@ export const GameEngine: React.FC<GameEngineProps> = ({
   // Get current data chunk
   const currentItems = queue[currentGroupIndex] || [];
 
+  if (!activeItems || activeItems.length === 0) return null;
+
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 pt-4 shrink-0">
          <button 
-           onClick={onExit} 
+           onClick={handleExit} 
            className="text-gray-400 active:text-gray-600 font-bold text-xl p-2"
            aria-label="Exit Game"
          >

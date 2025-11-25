@@ -1,20 +1,30 @@
+
 import React from 'react';
-import { SessionRecord } from '../types';
+import { useNavigate } from 'react-router-dom';
 import { getHistory } from '../services/storage';
+import { useSessionStore } from '../store/sessionStore';
+import { SessionRecord } from '../types';
 
-interface HistoryListProps {
-  onSelectRecord: (record: SessionRecord) => void;
-  onBack: () => void;
-}
-
-export const HistoryList: React.FC<HistoryListProps> = ({ onSelectRecord, onBack }) => {
+export const HistoryList: React.FC = () => {
+  const navigate = useNavigate();
   const history = getHistory();
+  const { selectHistoryRecord } = useSessionStore();
+
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  const handleSelect = (record: SessionRecord) => {
+    selectHistoryRecord(record);
+    // Pass state so Report knows where to go back to
+    navigate('/report', { state: { from: 'history' } });
+  };
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
       <div className="bg-white p-4 shadow-sm z-10 flex items-center border-b border-gray-200 shrink-0">
-        <button onClick={onBack} className="mr-4 text-gray-500 active:text-gray-800 text-xl font-bold p-2">
+        <button onClick={handleBack} className="mr-4 text-gray-500 active:text-gray-800 text-xl font-bold p-2">
           ←
         </button>
         <h2 className="text-lg font-bold text-gray-800">历史记录</h2>
@@ -36,7 +46,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({ onSelectRecord, onBack
             return (
               <button
                 key={record.id}
-                onClick={() => onSelectRecord(record)}
+                onClick={() => handleSelect(record)}
                 className="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-100 active:border-blue-300 transition-colors flex items-center justify-between text-left touch-manipulation active:bg-gray-50"
               >
                 <div className="flex-1">

@@ -1,15 +1,26 @@
+
 import { create } from 'zustand';
-import { Course, PinyinItem, SessionRecord, ViewState } from '../types';
+import { Course, QuizItem, SessionRecord, PinyinItem } from '../types';
 import { getMistakes } from '../services/storage';
 import * as CommonData from '../data/pinyin-common';
 
-// --- Helper Functions (Extracted from App.tsx) ---
+// Helper to transform specific Pinyin format to generic Quiz format for on-the-fly random generation
+const mapPinyinToQuiz = (item: PinyinItem): QuizItem => {
+  return {
+    question: item.word,
+    answer: item.pinyin,
+    level: item.level,
+    options: item.options || []
+  };
+};
+
+// --- Helper Functions ---
 
 const shuffleArray = <T,>(array: T[]): T[] => {
   return [...array].sort(() => Math.random() - 0.5);
 };
 
-const selectSessionItems = (allItems: PinyinItem[], count: number = 20): PinyinItem[] => {
+const selectSessionItems = (allItems: QuizItem[], count: number = 20): QuizItem[] => {
   if (allItems.length === 0) return [];
   
   let pool = [...allItems];
@@ -23,42 +34,36 @@ const selectSessionItems = (allItems: PinyinItem[], count: number = 20): PinyinI
   return shuffleArray(pool).slice(0, count);
 };
 
-const getCommonDataByLevel = (level: number): PinyinItem[] => {
+const getCommonDataByLevel = (level: number): QuizItem[] => {
   const key = `level${level}` as keyof typeof CommonData;
-  return CommonData[key] || CommonData.level1;
+  const rawData: PinyinItem[] = CommonData[key] || CommonData.level1;
+  return rawData.map(mapPinyinToQuiz);
 };
 
 // --- Store Definition ---
 
 interface SessionState {
   // State
-  view: ViewState;
-  activeItems: PinyinItem[];
+  activeItems: QuizItem[];
   activeCourseTitle: string;
   isMistakeMode: boolean;
   lastSessionRecord: SessionRecord | null;
 
   // Actions
-  setView: (view: ViewState) => void;
   startCourse: (course: Course) => void;
   startMistakeSession: () => void;
   completeSession: (record: SessionRecord) => void;
-  exitGame: () => void;
-  showHistory: () => void;
   selectHistoryRecord: (record: SessionRecord) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
   // Initial State
-  view: 'menu',
   activeItems: [],
   activeCourseTitle: "",
   isMistakeMode: false,
   lastSessionRecord: null,
 
   // Actions
-  setView: (view) => set({ view }),
-
   startCourse: (course: Course) => {
     // Pick random 20 items for this session
     const sessionItems = selectSessionItems(course.data, 20);
@@ -68,7 +73,6 @@ export const useSessionStore = create<SessionState>((set) => ({
         activeItems: sessionItems,
         activeCourseTitle: course.title,
         isMistakeMode: false,
-        view: 'game'
       });
     }
   },
@@ -77,7 +81,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     const mistakes = getMistakes();
     if (mistakes.length === 0) return;
 
-    let sessionItems: PinyinItem[] = [];
+    let sessionItems: QuizItem[] = [];
     const MAX_MISTAKE_ITEMS = 10;
     const MIN_THRESHOLD = 5;
 
@@ -110,7 +114,7 @@ export const useSessionStore = create<SessionState>((set) => ({
         // Try up to 10 times to find a unique one, otherwise just take one
         let candidate = sourceData[Math.floor(Math.random() * sourceData.length)];
         let attempts = 0;
-        while (sessionItems.some(item => item.word === candidate.word) && attempts < 10) {
+        while (sessionItems.some(item => item.question === candidate.question) && attempts < 10) {
             candidate = sourceData[Math.floor(Math.random() * sourceData.length)];
             attempts++;
         }
@@ -125,29 +129,18 @@ export const useSessionStore = create<SessionState>((set) => ({
       activeItems: sessionItems,
       activeCourseTitle: "错题练习",
       isMistakeMode: true,
-      view: 'game'
     });
   },
 
   completeSession: (record: SessionRecord) => {
     set({
       lastSessionRecord: record,
-      view: 'report'
     });
-  },
-
-  exitGame: () => {
-    set({ view: 'menu' });
-  },
-
-  showHistory: () => {
-    set({ view: 'history' });
   },
 
   selectHistoryRecord: (record: SessionRecord) => {
     set({
       lastSessionRecord: record,
-      view: 'history_report'
     });
   }
 }));

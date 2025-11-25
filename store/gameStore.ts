@@ -1,9 +1,10 @@
+
 import { create } from 'zustand';
-import { PinyinItem, GameMode } from '../types';
+import { QuizItem, GameMode } from '../types';
 
 interface GameState {
   // --- Core Session Data ---
-  queue: PinyinItem[][]; // Items are processed in chunks (groups)
+  queue: QuizItem[][]; // Items are processed in chunks (groups)
   currentGroupIndex: number;
   
   // --- Meta ---
@@ -14,16 +15,16 @@ interface GameState {
   mode: GameMode; // determines which view to render
 
   // --- Tracking ---
-  sessionMistakes: PinyinItem[];
-  allMistakes: PinyinItem[];
+  sessionMistakes: QuizItem[];
+  allMistakes: QuizItem[];
   startTime: number;
 
   // --- Actions ---
-  initGame: (items: PinyinItem[], courseTitle: string, isMistakeMode: boolean) => void;
+  initGame: (items: QuizItem[], courseTitle: string, isMistakeMode: boolean) => void;
   resetGame: () => void;
   
   // Logic Signals (called by views)
-  recordMistake: (item: PinyinItem) => void;
+  recordMistake: (item: QuizItem) => void;
   advanceRound: () => void;
 }
 
@@ -45,7 +46,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const shuffledItems = [...items].sort(() => Math.random() - 0.5);
     
     // Create Chunks of 4
-    const chunks: PinyinItem[][] = [];
+    const chunks: QuizItem[][] = [];
     for (let i = 0; i < shuffledItems.length; i += 4) {
       chunks.push(shuffledItems.slice(i, i + 4));
     }
@@ -75,11 +76,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   recordMistake: (item) => {
     const { sessionMistakes, allMistakes } = get();
     // Add to session mistakes if not already there
-    if (!sessionMistakes.some(m => m.word === item.word)) {
+    if (!sessionMistakes.some(m => m.question === item.question)) {
       set({ sessionMistakes: [...sessionMistakes, item] });
     }
     // Add to all mistakes log if not already there
-    if (!allMistakes.some(m => m.word === item.word)) {
+    if (!allMistakes.some(m => m.question === item.question)) {
       set({ allMistakes: [...allMistakes, item] });
     }
   },
@@ -97,8 +98,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       // End of Queue
       if (!inRetryPhase && sessionMistakes.length > 0) {
         // Start Retry Phase
-        const uniqueMistakes = Array.from(new Set(sessionMistakes)) as PinyinItem[];
-        const mistakeChunks: PinyinItem[][] = [];
+        const uniqueMistakes = Array.from(new Set(sessionMistakes)) as QuizItem[];
+        const mistakeChunks: QuizItem[][] = [];
         for (let i = 0; i < uniqueMistakes.length; i += 4) {
           mistakeChunks.push(uniqueMistakes.slice(i, i + 4));
         }
@@ -119,7 +120,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 }));
 
 // Helper to determine next mode based on data and probability
-const determineModeForGroup = (group: PinyinItem[], set: any) => {
+const determineModeForGroup = (group: QuizItem[], set: any) => {
   const canQuiz = group.every(item => item.options && item.options.length >= 3);
   // ~20% chance for Quiz mode if data supports it
   const mode: GameMode = canQuiz && Math.random() < 0.2 ? 'quiz' : 'match';

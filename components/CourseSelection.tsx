@@ -1,17 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
-import { Course, CourseGroup } from '../types';
+import { useNavigate } from 'react-router-dom';
 import { courseGroups } from '../data/index';
 import { getMistakes } from '../services/storage';
-
-interface CourseSelectionProps {
-  onSelect: (course: Course) => void;
-  onMistakeSelect: () => void;
-  onHistorySelect: () => void;
-}
+import { useSessionStore } from '../store/sessionStore';
 
 const STORAGE_KEY_GROUP = 'pinyin_selected_group_v1';
 
-export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMistakeSelect, onHistorySelect }) => {
+export const CourseSelection: React.FC = () => {
+  const navigate = useNavigate();
+  const { startCourse, startMistakeSession } = useSessionStore();
+
   // Initialize state from localStorage or default to the first group
   const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
     try {
@@ -40,6 +39,20 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
 
   const activeGroup = courseGroups.find(g => g.id === selectedGroupId) || courseGroups[0];
 
+  const handleSelectCourse = (course: any) => {
+    startCourse(course);
+    navigate('/game');
+  };
+
+  const handleMistakeSelect = () => {
+    startMistakeSession();
+    navigate('/game');
+  };
+
+  const handleHistorySelect = () => {
+    navigate('/history');
+  };
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
@@ -51,7 +64,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
           <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Master Chinese Pinyin</p>
         </div>
         <button 
-          onClick={onHistorySelect}
+          onClick={handleHistorySelect}
           className="p-2 text-gray-400 active:text-gray-600 active:bg-gray-100 rounded-full transition-all"
           title="历史记录"
         >
@@ -81,7 +94,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
         {/* Mistake Button (Always Visible at top if exists) */}
         {hasMistakes && (
           <button
-            onClick={onMistakeSelect}
+            onClick={handleMistakeSelect}
             className="w-full group relative flex items-center p-4 bg-white border-2 border-red-100 border-b-4 rounded-2xl active:bg-red-50 active:border-red-200 active:border-b-2 active:translate-y-[2px] transition-all mb-6 touch-manipulation"
           >
              <div className="h-12 w-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl mr-4 active:scale-95 transition-transform shadow-sm">
@@ -101,7 +114,7 @@ export const CourseSelection: React.FC<CourseSelectionProps> = ({ onSelect, onMi
           {activeGroup.courses.map((course, idx) => (
             <button
               key={course.id}
-              onClick={() => onSelect(course)}
+              onClick={() => handleSelectCourse(course)}
               className="w-full group relative flex items-center p-4 bg-white border-2 border-gray-100 border-b-4 rounded-2xl active:bg-white active:border-green-300 active:border-b-2 active:translate-y-[2px] transition-all touch-manipulation"
             >
               <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-xl mr-4 font-bold shadow-sm transition-transform active:scale-95 ${
