@@ -59,7 +59,7 @@ export const SessionReport: React.FC = () => {
   const accuracy = Math.round(((record.totalItems - record.mistakes.length) / record.totalItems) * 100);
   
   // Dedup mistakes for display just in case, though logic usually sends unique
-  const uniqueMistakes: QuizItem[] = Array.from(new Map(record.mistakes.map(item => [item.question, item] as [string, QuizItem])).values());
+  const uniqueMistakes: QuizItem[] = Array.from(new Map(record.mistakes.map(item => [item.question, item] as [string, QuizItem])).values()) as any;
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
