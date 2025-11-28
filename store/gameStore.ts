@@ -1,62 +1,62 @@
 
 import { create } from 'zustand';
-import { QuizItem, GameMode } from '../types';
+import { QuizItem, MistakeItem } from '../types';
+import { generateQuizOptions } from './quizLogic';
+import * as CommonData from '../data/pinyin-common';
 
 interface GameState {
   // --- Core Session Data ---
-  queue: QuizItem[][]; // Items are processed in chunks (groups)
-  currentGroupIndex: number;
+  queue: QuizItem[]; 
+  currentIndex: number;
   
   // --- Meta ---
   courseTitle: string;
   isMistakeMode: boolean;
   inRetryPhase: boolean;
   status: 'idle' | 'playing' | 'completed';
-  mode: GameMode; // determines which view to render
 
   // --- Tracking ---
-  sessionMistakes: QuizItem[];
-  allMistakes: QuizItem[];
+  sessionMistakes: MistakeItem[];
+  allMistakes: MistakeItem[];
   startTime: number;
 
   // --- Actions ---
-  initGame: (items: QuizItem[], courseTitle: string, isMistakeMode: boolean) => void;
+  initGame: (queue: QuizItem[], courseTitle: string, isMistakeMode: boolean) => void;
   resetGame: () => void;
   
   // Logic Signals (called by views)
-  recordMistake: (item: QuizItem) => void;
+  recordMistake: (item: MistakeItem) => void;
   advanceRound: () => void;
 }
+
+// Helper to get fallback distractors
+const getFallbackDistractors = (): string[] => {
+  // Grab a few random pinyins from level 1 common data
+  const sample = CommonData.level1
+    .slice(0, 10)
+    .map(i => 'pinyin' in i ? i.pinyin : '')
+    .filter(p => p !== '');
+    
+  return sample.sort(() => Math.random() - 0.5).slice(0, 3);
+};
 
 export const useGameStore = create<GameState>((set, get) => ({
   // Defaults
   queue: [],
-  currentGroupIndex: 0,
+  currentIndex: 0,
   courseTitle: '',
   isMistakeMode: false,
   inRetryPhase: false,
   status: 'idle',
-  mode: 'match',
   
   sessionMistakes: [],
   allMistakes: [],
   startTime: 0,
 
-  initGame: (items, courseTitle, isMistakeMode) => {
-    const shuffledItems = [...items].sort(() => Math.random() - 0.5);
-    
-    // Create Chunks of 4
-    const chunks: QuizItem[][] = [];
-    for (let i = 0; i < shuffledItems.length; i += 4) {
-      chunks.push(shuffledItems.slice(i, i + 4));
-    }
-
-    if (chunks.length === 0) return;
-
-    // Set initial state
+  initGame: (queue, courseTitle, isMistakeMode) => {
     set({
-      queue: chunks,
-      currentGroupIndex: 0,
+      queue,
+      currentIndex: 0,
       sessionMistakes: [],
       allMistakes: [],
       startTime: Date.now(),
@@ -65,8 +65,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       inRetryPhase: false,
       status: 'playing',
     });
-
-    determineModeForGroup(chunks[0], set);
   },
 
   resetGame: () => {
@@ -86,31 +84,43 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   advanceRound: () => {
-    const { currentGroupIndex, queue, inRetryPhase, sessionMistakes } = get();
+    const { currentIndex, queue, inRetryPhase, sessionMistakes } = get();
     
-    // Check if we have more groups in current queue
-    const nextIdx = currentGroupIndex + 1;
+    const nextIdx = currentIndex + 1;
     
     if (nextIdx < queue.length) {
-      set({ currentGroupIndex: nextIdx });
-      determineModeForGroup(queue[nextIdx], set);
+      set({ currentIndex: nextIdx });
     } else {
       // End of Queue
       if (!inRetryPhase && sessionMistakes.length > 0) {
         // Start Retry Phase
-        const uniqueMistakes = Array.from(new Set(sessionMistakes)) as QuizItem[];
-        const mistakeChunks: QuizItem[][] = [];
-        for (let i = 0; i < uniqueMistakes.length; i += 4) {
-          mistakeChunks.push(uniqueMistakes.slice(i, i + 4));
-        }
+        // Convert mistakes into a new queue
+        const retryQueue: QuizItem[] = [];
+        
+        // Strategy: 1 Quiz per mistake
+        sessionMistakes.forEach(m => {
+          let options = m.options;
+          // If options are missing (e.g. error from Match mode), provide fallbacks
+          if (!options || options.length === 0) {
+             options = getFallbackDistractors();
+          }
+
+          retryQueue.push({
+            type: 'quiz',
+            id: `retry-${m.question}-${Date.now()}`,
+            question: m.question,
+            answer: m.answer,
+            level: m.level,
+            options: generateQuizOptions(m.answer, options) // Pre-calculate
+          });
+        });
 
         set({
           inRetryPhase: true,
-          queue: mistakeChunks,
-          currentGroupIndex: 0,
+          queue: retryQueue,
+          currentIndex: 0,
           sessionMistakes: [] // Clear for next pass
         });
-        determineModeForGroup(mistakeChunks[0], set);
       } else {
         // Game Over
         set({ status: 'completed' });
@@ -118,11 +128,3 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   }
 }));
-
-// Helper to determine next mode based on data and probability
-const determineModeForGroup = (group: QuizItem[], set: any) => {
-  const canQuiz = group.every(item => item.options && item.options.length >= 3);
-  // ~20% chance for Quiz mode if data supports it
-  const mode: GameMode = canQuiz && Math.random() < 0.2 ? 'quiz' : 'match';
-  set({ mode });
-};

@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QuizItem, SessionRecord } from '../types';
+import { MistakeItem, SessionRecord, QuizChallenge, MatchChallenge, MatchPair } from '../types';
 import { ProgressBar } from './ProgressBar';
 import { saveSessionRecord, saveMistake, removeMistake } from '../services/storage';
 import { playSelect, playMatch, playError, playWin } from '../services/sound';
@@ -14,22 +14,21 @@ export const GameEngine: React.FC = () => {
   const navigate = useNavigate();
   
   // Session Data from Store
-  const { activeItems, activeCourseTitle, isMistakeMode, completeSession } = useSessionStore();
-
+  const { activeQueue, activeCourseTitle, isMistakeMode, completeSession } = useSessionStore();
+  
   // Redirect if no items (e.g. refresh)
   useEffect(() => {
-    if (!activeItems || activeItems.length === 0) {
+    if (!activeQueue || activeQueue.length === 0) {
       navigate('/', { replace: true });
     }
-  }, [activeItems, navigate]);
+  }, [activeQueue, navigate]);
 
   // Game Engine State & Actions
   const { 
     queue, 
-    currentGroupIndex, 
+    currentIndex, 
     inRetryPhase, 
     status,
-    mode,
     startTime,
     allMistakes,
     
@@ -41,13 +40,13 @@ export const GameEngine: React.FC = () => {
 
   // Initialize Game
   useEffect(() => {
-    if (activeItems.length > 0) {
-      initGame(activeItems, activeCourseTitle, isMistakeMode);
+    if (activeQueue.length > 0) {
+      initGame(activeQueue, activeCourseTitle, isMistakeMode);
     }
     return () => {
       resetGame();
     };
-  }, [activeItems, activeCourseTitle, isMistakeMode, initGame, resetGame]);
+  }, [activeQueue, activeCourseTitle, isMistakeMode, initGame, resetGame]);
 
   // Handle Game Completion
   useEffect(() => {
@@ -60,54 +59,77 @@ export const GameEngine: React.FC = () => {
         startTime: startTime,
         endTime: endTime,
         duration: endTime - startTime,
-        totalItems: activeItems.length, 
+        totalItems: activeQueue.length, 
         mistakes: allMistakes
       };
       
       saveSessionRecord(record);
       completeSession(record);
-      // Navigate to report, replacing the game route so back button goes to menu
+      // Navigate to report
       navigate('/report', { replace: true });
     }
-  }, [status, allMistakes, startTime, activeCourseTitle, activeItems.length, completeSession, navigate]);
+  }, [status, allMistakes, startTime, activeCourseTitle, activeQueue.length, completeSession, navigate]);
 
   const handleExit = () => {
     navigate('/');
   };
 
-  // View Callbacks
-  const handleSuccess = (item: QuizItem) => {
+  // --- Callback Handlers ---
+
+  // For Match View
+  const handleMatchSuccess = (pair: MatchPair) => {
+    playMatch();
+    if (isMistakeMode) {
+      removeMistake(pair.question);
+    }
+  };
+
+  const handleMatchError = (pair: MatchPair) => {
+    playError();
+    playSelect();
+    const mistake: MistakeItem = { ...pair, options: [] }; // Options irrelevant for match error storage
+    saveMistake(mistake);
+    recordMistake(mistake);
+  };
+
+  // For Quiz View
+  const handleQuizSuccess = (item: QuizChallenge) => {
     playMatch();
     if (isMistakeMode) {
       removeMistake(item.question);
     }
   };
 
-  const handleError = (item: QuizItem) => {
+  const handleQuizError = (item: QuizChallenge) => {
     playError();
     playSelect();
-    saveMistake(item);
-    recordMistake(item);
+    const mistake: MistakeItem = { 
+        question: item.question,
+        answer: item.answer,
+        level: item.level,
+        options: item.options
+    };
+    saveMistake(mistake);
+    recordMistake(mistake);
   };
 
-  const handleRoundComplete = () => {
+  const handleStepComplete = () => {
     advanceRound();
   };
 
   // Calculate Progress
-  const totalGroups = queue.length;
+  const totalItems = queue.length;
   let progress = 0;
 
   if (inRetryPhase) {
     progress = 100;
-  } else if (totalGroups > 0) {
-    progress = (currentGroupIndex / totalGroups) * 100;
+  } else if (totalItems > 0) {
+    progress = (currentIndex / totalItems) * 100;
   }
 
-  // Get current data chunk
-  const currentItems = queue[currentGroupIndex] || [];
+  const currentItem = queue[currentIndex];
 
-  if (!activeItems || activeItems.length === 0) return null;
+  if (!currentItem) return null;
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -134,25 +156,27 @@ export const GameEngine: React.FC = () => {
 
       {/* Mode Indicator */}
       <div className="text-center mt-2 text-xs font-bold text-gray-300 uppercase tracking-widest">
-        {mode === 'match' ? '配对' : '选择'}
+        {currentItem.type === 'match' ? '配对' : '选择'}
       </div>
 
       {/* Game Content Router */}
       <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center overscroll-contain">
-        {status === 'playing' && currentItems.length > 0 && (
-           mode === 'match' ? (
+        {status === 'playing' && (
+           currentItem.type === 'match' ? (
              <MatchView 
-               items={currentItems}
-               onSuccess={handleSuccess}
-               onError={handleError}
-               onComplete={handleRoundComplete}
+               key={currentItem.id}
+               item={currentItem}
+               onSuccess={handleMatchSuccess}
+               onError={handleMatchError}
+               onComplete={handleStepComplete}
              />
            ) : (
              <QuizView 
-               items={currentItems}
-               onSuccess={handleSuccess}
-               onError={handleError}
-               onComplete={handleRoundComplete}
+               key={currentItem.id} 
+               item={currentItem}
+               onSuccess={handleQuizSuccess}
+               onError={handleQuizError}
+               onNext={handleStepComplete}
              />
            )
         )}

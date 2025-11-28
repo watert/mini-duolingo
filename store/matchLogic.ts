@@ -1,21 +1,23 @@
 
-import { QuizItem, CardState } from '../types';
+import { MatchChallenge, CardState } from '../types';
 
-export const generateCardsForGroup = (group: QuizItem[]): CardState[] => {
-  // Create Question Cards (formerly Hanzi)
-  const questionCards: CardState[] = group.map(item => ({
-    id: `q-${item.question}-${item.answer}`,
-    question: item.question,
-    display: item.question,
+export const generateCardsForGroup = (item: MatchChallenge): CardState[] => {
+  const { pairs } = item;
+  
+  // Create Question Cards
+  const questionCards: CardState[] = pairs.map(p => ({
+    id: `q-${p.question}-${p.answer}`,
+    question: p.question,
+    display: p.question,
     type: 'question',
     status: 'idle'
   }));
 
-  // Create Answer Cards (formerly Pinyin)
-  const answerCards: CardState[] = group.map(item => ({
-    id: `a-${item.question}-${item.answer}`,
-    question: item.question,
-    display: item.answer,
+  // Create Answer Cards
+  const answerCards: CardState[] = pairs.map(p => ({
+    id: `a-${p.question}-${p.answer}`,
+    question: p.question, // Link by question
+    display: p.answer,
     type: 'answer',
     status: 'idle'
   }));
@@ -31,7 +33,9 @@ export const generateCardsForGroup = (group: QuizItem[]): CardState[] => {
 
   // Interleave for display grid
   const combinedCards: CardState[] = [];
-  for (let i = 0; i < 4; i++) {
+  const count = pairs.length;
+  
+  for (let i = 0; i < count; i++) {
     if (leftCol[i]) combinedCards.push(leftCol[i]);
     if (rightCol[i]) combinedCards.push(rightCol[i]);
   }

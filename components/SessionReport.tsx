@@ -1,22 +1,8 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSessionStore } from '../store/sessionStore';
-import { QuizItem } from '../types';
-
-const getLevelDescription = (level: number): string => {
-  switch (level) {
-    case 1: return "Level 1";
-    case 2: return "Level 2";
-    case 3: return "Level 3";
-    case 4: return "Level 4";
-    case 5: return "Level 5";
-    case 6: return "Level 6";
-    case 7: return "Level 7";
-    case 8: return "Level 8";
-    case 9: return "Level 9";
-    default: return "Basic";
-  }
-};
+import { MistakeItem } from '../types';
 
 const formatDuration = (ms: number): string => {
   const seconds = Math.floor(ms / 1000);
@@ -59,7 +45,7 @@ export const SessionReport: React.FC = () => {
   const accuracy = Math.round(((record.totalItems - record.mistakes.length) / record.totalItems) * 100);
   
   // Dedup mistakes for display just in case, though logic usually sends unique
-  const uniqueMistakes: QuizItem[] = Array.from(new Map(record.mistakes.map(item => [item.question, item] as [string, QuizItem])).values()) as any;
+  const uniqueMistakes: MistakeItem[] = Array.from(new Map(record.mistakes.map(item => [item.question, item] as [string, MistakeItem])).values()) as any;
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">

@@ -1,20 +1,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from './Card';
-import { CardState, GameViewProps } from '../types';
+import { CardState, MatchViewProps } from '../types';
 import { generateCardsForGroup } from '../store/matchLogic';
 
-export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, onComplete }) => {
+export const MatchView: React.FC<MatchViewProps> = ({ item, onSuccess, onError, onComplete }) => {
   const [cards, setCards] = useState<CardState[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Initialize cards when items change (new round)
+  // Initialize cards when item changes
   useEffect(() => {
-    setCards(generateCardsForGroup(items));
+    setCards(generateCardsForGroup(item));
     setSelectedCardId(null);
     setIsProcessing(false);
-  }, [items]);
+  }, [item]);
 
   const handleCardClick = useCallback((clickedId: string) => {
     if (isProcessing) return;
@@ -38,13 +38,13 @@ export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, 
     // Visually select second card
     setCards(prev => prev.map(c => c.id === clickedId ? { ...c, status: 'selected' } : c));
 
-    // Match based on the question ID (which is derived from 'question' in cardLogic)
+    // Match based on the question ID
     const isMatch = firstCard.question === clickedCard.question;
 
     if (isMatch) {
       // Logic Success
-      const matchedItem = items.find(i => i.question === firstCard.question);
-      if (matchedItem) onSuccess(matchedItem);
+      const pair = item.pairs.find(p => p.question === firstCard.question);
+      if (pair) onSuccess(pair);
 
       setTimeout(() => {
         // Update state to matched
@@ -67,8 +67,8 @@ export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, 
 
     } else {
       // Logic Error
-      const mistakeItem = items.find(i => i.question === firstCard.question || i.question === clickedCard.question);
-      if (mistakeItem) onError(mistakeItem);
+      const pair = item.pairs.find(p => p.question === firstCard.question || p.question === clickedCard.question);
+      if (pair) onError(pair);
 
       setTimeout(() => {
         // Show error state
@@ -86,7 +86,7 @@ export const MatchView: React.FC<GameViewProps> = ({ items, onSuccess, onError, 
         }, 800);
       }, 200);
     }
-  }, [cards, selectedCardId, isProcessing, items, onSuccess, onError, onComplete]);
+  }, [cards, selectedCardId, isProcessing, item, onSuccess, onError, onComplete]);
 
   return (
     <div className="grid grid-cols-2 gap-4 w-full max-w-sm animate-fade-in">

@@ -1,39 +1,24 @@
 
-import { QuizItem, SessionRecord } from '../types';
+import { MistakeItem, SessionRecord } from '../types';
 
-const MISTAKES_KEY = 'pinyin_mistakes_v1';
-const HISTORY_KEY = 'pinyin_history_v1';
+const MISTAKES_KEY = 'pinyin_mistakes_v2';
+const HISTORY_KEY = 'pinyin_history_v2';
 
 // --- Mistakes Logic ---
 
-export const getMistakes = (): QuizItem[] => {
+export const getMistakes = (): MistakeItem[] => {
   try {
     const dataStr = localStorage.getItem(MISTAKES_KEY);
     if (!dataStr) return [];
     
-    const rawData = JSON.parse(dataStr);
-    
-    // Migration: Check if data is in old PinyinItem format (word/pinyin) and convert to QuizItem (question/answer)
-    // We assume if 'question' is missing but 'word' exists, it's legacy data.
-    return rawData.map((item: any) => {
-      if (item.word && !item.question) {
-        return {
-          question: item.word,
-          answer: item.pinyin,
-          level: item.level,
-          options: item.options || []
-        } as QuizItem;
-      }
-      return item as QuizItem;
-    });
-
+    return JSON.parse(dataStr) as MistakeItem[];
   } catch (e) {
     console.error("Failed to load mistakes", e);
     return [];
   }
 };
 
-export const saveMistake = (item: QuizItem) => {
+export const saveMistake = (item: MistakeItem) => {
   const current = getMistakes();
   // Avoid duplicates
   if (!current.some(i => i.question === item.question)) {
@@ -58,25 +43,7 @@ export const getHistory = (): SessionRecord[] => {
   try {
     const dataStr = localStorage.getItem(HISTORY_KEY);
     if (!dataStr) return [];
-    
-    const rawHistory = JSON.parse(dataStr);
-
-    // Perform same migration on nested mistakes within history
-    return rawHistory.map((record: any) => {
-      if (record.mistakes && record.mistakes.length > 0) {
-        // Check first item for legacy format
-        if (record.mistakes[0].word && !record.mistakes[0].question) {
-          record.mistakes = record.mistakes.map((m: any) => ({
-             question: m.word,
-             answer: m.pinyin,
-             level: m.level,
-             options: m.options || []
-          }));
-        }
-      }
-      return record as SessionRecord;
-    });
-
+    return JSON.parse(dataStr) as SessionRecord[];
   } catch (e) {
     console.error("Failed to load history", e);
     return [];

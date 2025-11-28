@@ -1,14 +1,56 @@
 
-export interface PinyinItem {
-  pinyin: string;
+export interface BasePinyinItem {
   word: string;
+  pinyin: string;
   level: number;
-  options?: string[]; // Distractors for multiple choice mode, length 3
 }
 
-export interface QuizItem {
-  question: string; // Formerly 'word'
-  answer: string;   // Formerly 'pinyin'
+// Default items that can be either Quiz or Match (determined by engine)
+export interface PinyinDefaultItem extends BasePinyinItem {
+  options: string[]; 
+  type?: undefined;  
+}
+
+// Explicit Quiz Items
+export interface PinyinSelectItem extends BasePinyinItem {
+  type: 'QUIZ';
+  options: string[];
+}
+
+// Explicit Match Items (Groups)
+export interface PinyinMatchItem {
+  type: 'MATCH';
+  items: BasePinyinItem[];
+}
+
+export type PinyinItem = PinyinDefaultItem | PinyinSelectItem | PinyinMatchItem;
+
+export interface QuizChallenge {
+  type: 'quiz';
+  id: string;
+  question: string;
+  answer: string;
+  level: number;
+  options: string[]; 
+}
+
+export interface MatchPair {
+  question: string;
+  answer: string;
+  level: number;
+}
+
+export interface MatchChallenge {
+  type: 'match';
+  id: string;
+  pairs: MatchPair[];
+}
+
+export type QuizItem = QuizChallenge | MatchChallenge;
+
+export interface MistakeItem {
+  question: string;
+  answer: string;
   level: number;
   options: string[];
 }
@@ -17,7 +59,7 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  data: QuizItem[];
+  data: PinyinItem[];
 }
 
 export type CourseCategory = 'pinyin' | 'other';
@@ -32,49 +74,49 @@ export interface CourseGroup {
 export type CourseId = string;
 
 export interface GameState {
-  // Session Progression
-  queue: QuizItem[][]; 
-  currentGroupIndex: number;
+  queue: QuizItem[]; 
+  currentIndex: number;
   
-  // Meta
   courseTitle: string;
   isMistakeMode: boolean;
   inRetryPhase: boolean;
   status: 'idle' | 'playing' | 'completed';
-  mode: GameMode;
   startTime: number;
 
-  // Scoring/Tracking
-  sessionMistakes: QuizItem[];
-  allMistakes: QuizItem[];
+  sessionMistakes: MistakeItem[];
+  allMistakes: MistakeItem[];
 }
 
 export interface CardState {
-  id: string; // unique combo of question+type
-  question: string; // Formerly word
-  display: string; // The text to show (either question or answer)
-  type: 'question' | 'answer'; // Formerly 'hanzi' | 'pinyin'
+  id: string;
+  question: string; 
+  display: string; 
+  type: 'question' | 'answer'; 
   status: 'idle' | 'selected' | 'matched' | 'error';
 }
 
 export interface SessionRecord {
   id: string;
   courseTitle: string;
-  startTime: number; // timestamp
-  endTime: number; // timestamp
-  duration: number; // milliseconds
+  startTime: number; 
+  endTime: number; 
+  duration: number; 
   totalItems: number;
-  mistakes: QuizItem[]; // List of items missed at least once
+  mistakes: MistakeItem[]; 
 }
-
-export type GameMode = 'match' | 'quiz';
 
 export type ViewState = 'menu' | 'game' | 'report' | 'history' | 'history_report';
 
-// Props for the pure/smart components
-export interface GameViewProps {
-  items: QuizItem[];
-  onSuccess: (item: QuizItem) => void;
-  onError: (item: QuizItem) => void;
+export interface MatchViewProps {
+  item: MatchChallenge;
+  onSuccess: (pair: MatchPair) => void;
+  onError: (pair: MatchPair) => void;
   onComplete: () => void;
+}
+
+export interface QuizViewProps {
+  item: QuizChallenge;
+  onSuccess: (item: QuizChallenge) => void;
+  onError: (item: QuizChallenge) => void;
+  onNext: () => void;
 }
