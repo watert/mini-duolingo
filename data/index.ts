@@ -194,7 +194,13 @@ export const courseGroups: CourseGroup[] = [
         title: '综合题型测试',
         description: '包含选择、配对、填空三种题型',
         data: MixedTest.mixedTest
-      }
+      },
+      {
+        id: 'test-fill-blanks',
+        title: '仅填空',
+        description: '仅包含填空题型',
+        data: MixedTest.mixedTest.filter((item) => item.type === 'FILL'),
+      },
     ]
   },
 ];
