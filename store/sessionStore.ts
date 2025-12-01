@@ -16,6 +16,74 @@ const getCommonDataByLevel = (level: number): PinyinItem[] => {
   return CommonData[key] || CommonData.level1;
 };
 
+/**
+ * Groups items into chunks of `size` (default 4), ensuring that within each chunk,
+ * both questions (via getQ) and answers (via getA) are unique.
+ * This prevents Match mode ambiguity where multiple cards might look identical.
+ */
+const chunkItemsUnique = <T>(
+  items: T[], 
+  getQ: (i: T) => string, 
+  getA: (i: T) => string, 
+  size: number = 4
+): T[][] => {
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  // Work with a copy of the pool
+  const pool = [...items]; 
+  
+  while (pool.length > 0) {
+    let foundIndex = -1;
+    
+    // Find the first item in the pool that does NOT collide with the current chunk
+    for (let i = 0; i < pool.length; i++) {
+      const item = pool[i];
+      const q = getQ(item);
+      const a = getA(item);
+      
+      const collides = current.some(existing => 
+        getQ(existing) === q || getA(existing) === a
+      );
+      
+      if (!collides) {
+        foundIndex = i;
+        break;
+      }
+    }
+    
+    if (foundIndex !== -1) {
+      // Add valid item to current chunk
+      current.push(pool[foundIndex]);
+      pool.splice(foundIndex, 1);
+      
+      if (current.length === size) {
+        chunks.push(current);
+        current = [];
+      }
+    } else {
+      // No item in the entire pool fits in the current chunk (all collide).
+      // We must close the current chunk (even if partial) and start a new one.
+      if (current.length > 0) {
+        chunks.push(current);
+        current = [];
+      } else {
+        // Edge case: Current is empty, but pool has items.
+        // This theoretically implies the item collides with "nothing", which is impossible.
+        // But to prevent infinite loops if logic fails:
+        chunks.push([pool[0]]);
+        pool.shift();
+      }
+    }
+  }
+  
+  // Push any remaining partial chunk
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+  
+  return chunks;
+};
+
 // --- Game Generation Logic ---
 
 const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
@@ -57,10 +125,9 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
   });
 
   // 2. Process default items (Grouping into chunks of 4)
-  const chunks: PinyinDefaultItem[][] = [];
-  for (let i = 0; i < defaultItems.length; i += 4) {
-    chunks.push(defaultItems.slice(i, i + 4));
-  }
+  // Shuffle first to ensure random combinations each time, then chunk uniquely
+  const shuffledDefaults = shuffleArray(defaultItems);
+  const chunks = chunkItemsUnique(shuffledDefaults, i => i.word, i => i.pinyin, 4);
 
   chunks.forEach(chunk => {
     // Determine mode for this chunk
@@ -69,7 +136,7 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
     const isQuizMode = canQuiz && Math.random() < 0.2; // 20% chance for quiz mode if possible
 
     if (isQuizMode) {
-      // Add 4 individual quiz items
+      // Add individual quiz items
       chunk.forEach(item => {
         queue.push({
           type: 'quiz',
@@ -102,14 +169,11 @@ const generateMistakeQueue = (mistakes: MistakeItem[]): QuizItem[] => {
   const queue: QuizItem[] = [];
   const shuffled = shuffleArray(mistakes);
   
-  const chunks: MistakeItem[][] = [];
-  for (let i = 0; i < shuffled.length; i += 4) {
-    chunks.push(shuffled.slice(i, i + 4));
-  }
+  const chunks = chunkItemsUnique(shuffled, m => m.question, m => m.answer, 4);
 
   chunks.forEach(chunk => {
      if (chunk.length < 4) {
-       // Too few for a match, do quizzes
+       // Too few for a match (or resulted from collision splitting), do quizzes
        chunk.forEach(m => {
          queue.push({
            type: 'quiz',
