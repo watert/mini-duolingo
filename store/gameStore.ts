@@ -97,22 +97,34 @@ export const useGameStore = create<GameState>((set, get) => ({
         // Convert mistakes into a new queue
         const retryQueue: QuizItem[] = [];
         
-        // Strategy: 1 Quiz per mistake
         sessionMistakes.forEach(m => {
-          let options = m.options;
-          // If options are missing (e.g. error from Match mode), provide fallbacks
-          if (!options || options.length === 0) {
-             options = getFallbackDistractors();
-          }
+          if (m.type === 'fill') {
+            // Restore Fill Item
+            retryQueue.push({
+              type: 'fill',
+              id: `retry-fill-${m.question}-${Date.now()}`,
+              question: m.question,
+              answers: m.answers || [],
+              level: m.level,
+              options: m.options // Use stored options
+            });
+          } else {
+            // Restore Quiz Item (Match errors degrade to Quiz for simplicity in retry, unless complex logic added)
+            let options = m.options;
+            // If options are missing (e.g. error from Match mode), provide fallbacks
+            if (!options || options.length === 0) {
+               options = getFallbackDistractors();
+            }
 
-          retryQueue.push({
-            type: 'quiz',
-            id: `retry-${m.question}-${Date.now()}`,
-            question: m.question,
-            answer: m.answer,
-            level: m.level,
-            options: generateQuizOptions(m.answer, options) // Pre-calculate
-          });
+            retryQueue.push({
+              type: 'quiz',
+              id: `retry-${m.question}-${Date.now()}`,
+              question: m.question,
+              answer: m.answer,
+              level: m.level,
+              options: generateQuizOptions(m.answer, options) // Pre-calculate
+            });
+          }
         });
 
         set({

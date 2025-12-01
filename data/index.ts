@@ -3,6 +3,7 @@ import { CourseGroup } from '../types';
 import * as Grade1 from './pinyin-grade-1';
 import * as Grade1_2 from './pinyin-grade-1-2';
 import * as Common from './pinyin-common';
+import * as MixedTest from './pinyin-test';
 import { specialCourses } from './pinyin-special';
 
 export const courseGroups: CourseGroup[] = [
@@ -182,5 +183,18 @@ export const courseGroups: CourseGroup[] = [
         data: Common.level9
       }
     ]
-  }
+  },
+    {
+    id: 'test-group',
+    title: '测试 (Test)',
+    category: 'pinyin',
+    courses: [
+      {
+        id: 'test-mixed',
+        title: '综合题型测试',
+        description: '包含选择、配对、填空三种题型',
+        data: MixedTest.mixedTest
+      }
+    ]
+  },
 ];

@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MistakeItem, SessionRecord, QuizChallenge, MatchChallenge, MatchPair } from '../types';
+import { MistakeItem, SessionRecord, QuizChallenge, MatchChallenge, MatchPair, FillBlanksChallenge } from '../types';
 import { ProgressBar } from './ProgressBar';
 import { saveSessionRecord, saveMistake, removeMistake } from '../services/storage';
 import { playSelect, playMatch, playError, playWin } from '../services/sound';
@@ -9,6 +9,7 @@ import { useGameStore } from '../store/gameStore';
 import { useSessionStore } from '../store/sessionStore';
 import { MatchView } from './MatchView';
 import { QuizView } from './QuizView';
+import { FillBlanksView } from './FillBlanksView';
 
 export const GameEngine: React.FC = () => {
   const navigate = useNavigate();
@@ -87,7 +88,13 @@ export const GameEngine: React.FC = () => {
   const handleMatchError = (pair: MatchPair) => {
     playError();
     playSelect();
-    const mistake: MistakeItem = { ...pair, options: [] }; // Options irrelevant for match error storage
+    const mistake: MistakeItem = { 
+      type: 'match',
+      question: pair.question,
+      answer: pair.answer,
+      level: pair.level,
+      options: [] // Options irrelevant for match error storage
+    }; 
     saveMistake(mistake);
     recordMistake(mistake);
   };
@@ -104,10 +111,34 @@ export const GameEngine: React.FC = () => {
     playError();
     playSelect();
     const mistake: MistakeItem = { 
+        type: 'quiz',
         question: item.question,
         answer: item.answer,
         level: item.level,
         options: item.options
+    };
+    saveMistake(mistake);
+    recordMistake(mistake);
+  };
+
+  // For Fill View
+  const handleFillSuccess = (item: FillBlanksChallenge) => {
+    playMatch();
+    if (isMistakeMode) {
+      removeMistake(item.question);
+    }
+  };
+
+  const handleFillError = (item: FillBlanksChallenge) => {
+    playError();
+    playSelect();
+    const mistake: MistakeItem = {
+      type: 'fill',
+      question: item.question,
+      answer: item.answers.join(' '), // Just for display/reference
+      answers: item.answers,
+      level: item.level,
+      options: item.options
     };
     saveMistake(mistake);
     recordMistake(mistake);
@@ -130,6 +161,12 @@ export const GameEngine: React.FC = () => {
   const currentItem = queue[currentIndex];
 
   if (!currentItem) return null;
+
+  // Determine label
+  let modeLabel = '练习';
+  if (currentItem.type === 'match') modeLabel = '配对';
+  else if (currentItem.type === 'quiz') modeLabel = '选择';
+  else if (currentItem.type === 'fill') modeLabel = '填空';
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -156,7 +193,7 @@ export const GameEngine: React.FC = () => {
 
       {/* Mode Indicator */}
       <div className="text-center mt-2 text-xs font-bold text-gray-300 uppercase tracking-widest">
-        {currentItem.type === 'match' ? '配对' : '选择'}
+        {modeLabel}
       </div>
 
       {/* Game Content Router */}
@@ -169,6 +206,14 @@ export const GameEngine: React.FC = () => {
                onSuccess={handleMatchSuccess}
                onError={handleMatchError}
                onComplete={handleStepComplete}
+             />
+           ) : currentItem.type === 'fill' ? (
+             <FillBlanksView
+               key={currentItem.id}
+               item={currentItem}
+               onSuccess={handleFillSuccess}
+               onError={handleFillError}
+               onNext={handleStepComplete}
              />
            ) : (
              <QuizView 

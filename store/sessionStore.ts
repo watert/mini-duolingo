@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { Course, QuizItem, SessionRecord, PinyinItem, PinyinDefaultItem, MistakeItem, PinyinMatchItem } from '../types';
+import { Course, QuizItem, SessionRecord, PinyinItem, PinyinDefaultItem, MistakeItem, PinyinMatchItem, PinyinFillItem } from '../types';
 import { getMistakes } from '../services/storage';
 import { generateQuizOptions } from './quizLogic';
 import * as CommonData from '../data/pinyin-common';
@@ -84,10 +84,10 @@ const chunkItemsUnique = <T>(
   return chunks;
 };
 
-// --- Game Generation Logic ---
+// --- Helper Functions for Pinyin to Quiz Conversion ---
 
-const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
-  const queue: QuizItem[] = [];
+const parsePinyinToQuiz = (items: PinyinItem[]): QuizItem[] => {
+  const quizItems: QuizItem[] = [];
   const defaultItems: PinyinDefaultItem[] = [];
 
   // 1. Process items
@@ -95,7 +95,7 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
     // Check types explicitly
     if (item.type === 'QUIZ') {
       // PinyinSelectItem (Explicit Quiz)
-      queue.push({
+      quizItems.push({
         type: 'quiz',
         id: `quiz-${Math.random().toString(36).substr(2, 9)}`,
         question: item.word,
@@ -107,9 +107,8 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
       });
     } else if (item.type === 'MATCH') {
       // PinyinMatchItem (Explicit Match Group)
-      // Need to cast because TypeScript narrowing on discriminating unions inside loops can be tricky without a direct switch
       const matchItem = item as PinyinMatchItem;
-      queue.push({
+      quizItems.push({
         type: 'match',
         id: `match-${Math.random().toString(36).substr(2, 9)}`,
         pairs: matchItem.items.map(sub => ({
@@ -117,6 +116,18 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
           answer: sub.pinyin,
           level: sub.level
         }))
+      });
+    } else if (item.type === 'FILL') {
+      // PinyinFillItem (Fill in the blanks)
+      const fillItem = item as PinyinFillItem;
+      quizItems.push({
+        type: 'fill',
+        id: `fill-${Math.random().toString(36).substr(2, 9)}`,
+        question: fillItem.question,
+        answers: fillItem.answers,
+        level: fillItem.level,
+        // Ensure options are shuffled
+        options: shuffleArray(fillItem.options)
       });
     } else {
       // PinyinDefaultItem (implicit type, fallback to dynamic grouping)
@@ -138,7 +149,7 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
     if (isQuizMode) {
       // Add individual quiz items
       chunk.forEach(item => {
-        queue.push({
+        quizItems.push({
           type: 'quiz',
           id: `quiz-${item.word}-${Date.now()}`,
           question: item.word,
@@ -149,7 +160,7 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
       });
     } else {
       // Add 1 match item containing the chunk
-      queue.push({
+      quizItems.push({
         type: 'match',
         id: `match-${chunk[0].word}-${Date.now()}`,
         pairs: chunk.map(i => ({
@@ -161,7 +172,14 @@ const generateGameQueue = (items: PinyinItem[]): QuizItem[] => {
     }
   });
 
-  return shuffleArray(queue);
+  return quizItems;
+};
+
+// --- Game Generation Logic ---
+
+const generateGameQueue = (quizItems: QuizItem[]): QuizItem[] => {
+  // Simply shuffle the pre-converted quiz items
+  return shuffleArray(quizItems);
 };
 
 // Mistake items are usually raw pairs with distractor options
@@ -169,7 +187,12 @@ const generateMistakeQueue = (mistakes: MistakeItem[]): QuizItem[] => {
   const queue: QuizItem[] = [];
   const shuffled = shuffleArray(mistakes);
   
-  const chunks = chunkItemsUnique(shuffled, m => m.question, m => m.answer, 4);
+  // Separate Fill/Special types from general Quiz/Match pool
+  const standardMistakes = shuffled.filter(m => m.type !== 'fill');
+  const fillMistakes = shuffled.filter(m => m.type === 'fill');
+
+  // Process Standard Mistakes (Quiz/Match)
+  const chunks = chunkItemsUnique(standardMistakes, m => m.question, m => m.answer, 4);
 
   chunks.forEach(chunk => {
      if (chunk.length < 4) {
@@ -198,7 +221,19 @@ const generateMistakeQueue = (mistakes: MistakeItem[]): QuizItem[] => {
      }
   });
 
-  return queue;
+  // Process Fill Mistakes
+  fillMistakes.forEach(m => {
+    queue.push({
+      type: 'fill',
+      id: `retry-fill-${m.question}`,
+      question: m.question,
+      answers: m.answers || [],
+      level: m.level,
+      options: shuffleArray(m.options || [])
+    });
+  });
+
+  return shuffleArray(queue);
 };
 
 // --- Store Definition ---
@@ -237,8 +272,11 @@ export const useSessionStore = create<SessionState>((set) => ({
        sessionItems = shuffleArray(pool).slice(0, 20);
     }
     
-    // 2. Generate Game Queue
-    const queue = generateGameQueue(sessionItems);
+    // 2. Convert PinyinItem to QuizItem
+    const quizItems = parsePinyinToQuiz(sessionItems);
+    
+    // 3. Generate Game Queue from pre-converted quiz items
+    const queue = generateGameQueue(quizItems);
 
     if (queue.length > 0) {
       set({

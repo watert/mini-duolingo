@@ -23,7 +23,16 @@ export interface PinyinMatchItem {
   items: BasePinyinItem[];
 }
 
-export type PinyinItem = PinyinDefaultItem | PinyinSelectItem | PinyinMatchItem;
+// Explicit Fill in the Blanks Items
+export interface PinyinFillItem {
+  type: 'FILL';
+  question: string; // "ni __ hao"
+  answers: string[]; // ["men"]
+  options: string[]; // ["men", "me", "ma"] (distractors + answer)
+  level: number;
+}
+
+export type PinyinItem = PinyinDefaultItem | PinyinSelectItem | PinyinMatchItem | PinyinFillItem;
 
 export interface QuizChallenge {
   type: 'quiz';
@@ -46,11 +55,22 @@ export interface MatchChallenge {
   pairs: MatchPair[];
 }
 
-export type QuizItem = QuizChallenge | MatchChallenge;
+export interface FillBlanksChallenge {
+  type: 'fill';
+  id: string;
+  question: string;
+  answers: string[];
+  level: number;
+  options: string[];
+}
+
+export type QuizItem = QuizChallenge | MatchChallenge | FillBlanksChallenge;
 
 export interface MistakeItem {
+  type?: 'quiz' | 'match' | 'fill';
   question: string;
   answer: string;
+  answers?: string[];
   level: number;
   options: string[];
 }
@@ -118,5 +138,12 @@ export interface QuizViewProps {
   item: QuizChallenge;
   onSuccess: (item: QuizChallenge) => void;
   onError: (item: QuizChallenge) => void;
+  onNext: () => void;
+}
+
+export interface FillBlanksViewProps {
+  item: FillBlanksChallenge;
+  onSuccess: (item: FillBlanksChallenge) => void;
+  onError: (item: FillBlanksChallenge) => void;
   onNext: () => void;
 }
