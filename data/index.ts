@@ -201,6 +201,18 @@ export const courseGroups: CourseGroup[] = [
         description: '仅包含填空题型',
         data: MixedTest.mixedTest.filter((item) => item.type === 'FILL'),
       },
+      {
+        id: 'test-match-pairs',
+        title: '仅配对',
+        description: '仅包含配对题型',
+        data: MixedTest.mixedTest.filter((item) => item.type === 'MATCH'),
+      },
+      {
+        id: 'test-quiz',
+        title: '仅选择',
+        description: '仅包含选择题型',
+        data: MixedTest.mixedTest.filter((item) => item.type === 'QUIZ'),
+      },
     ]
   },
 ];

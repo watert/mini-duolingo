@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { FillBlanksViewProps } from '../types';
@@ -21,21 +20,34 @@ interface DraggableOptionProps {
   id: string;
   text: string;
   disabled: boolean;
+  isUsed: boolean;
   onSelect: () => void; // Fallback for click
 }
 
-const DraggableOption: React.FC<DraggableOptionProps> = ({ id, text, disabled, onSelect }) => {
+const DraggableOption: React.FC<DraggableOptionProps> = ({ id, text, disabled, isUsed, onSelect }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [{ isDragging }, drag] = useDrag(() => ({
     type: ItemTypes.WORD,
     item: { id, text, origin: 'pool' } as DragItem,
-    canDrag: !disabled,
+    canDrag: !disabled && !isUsed,
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
-  }), [id, text, disabled]);
+  }), [id, text, disabled, isUsed]);
 
   drag(ref);
+
+  // Placeholder state for used items
+  if (isUsed) {
+    return (
+      <div 
+        className="px-4 py-3 border-2 border-transparent text-lg font-bold opacity-0 pointer-events-none select-none"
+        aria-hidden="true"
+      >
+        {text}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -80,10 +92,16 @@ const DroppableSlot: React.FC<DroppableSlotProps> = ({ index, text, isCorrect, o
     type: ItemTypes.WORD,
     item: { id: `slot-${index}`, text: text || '', origin: 'slot', index } as DragItem,
     canDrag: !!text,
+    end: (item, monitor) => {
+      // Support dragging outside to remove
+      if (!monitor.didDrop()) {
+        onClick();
+      }
+    },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
-  }), [text, index]);
+  }), [text, index, onClick]);
 
   // Initialize drag and drop refs
   drag(drop(ref));
@@ -115,6 +133,12 @@ const DroppableSlot: React.FC<DroppableSlotProps> = ({ index, text, isCorrect, o
 
 // --- Main Component ---
 
+interface OptionState {
+  id: string;
+  text: string;
+  isUsed: boolean;
+}
+
 export const FillBlanksView: React.FC<FillBlanksViewProps> = ({ 
   item, 
   onSuccess, 
@@ -122,8 +146,8 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
   onNext 
 }) => {
   const [filledSlots, setFilledSlots] = useState<(string | null)[]>([]);
-  // Store options as object to track usage
-  const [availableOptions, setAvailableOptions] = useState<{id: string, text: string}[]>([]);
+  // Store all options with their usage state
+  const [options, setOptions] = useState<OptionState[]>([]);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -136,7 +160,12 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
 
   useEffect(() => {
     setFilledSlots(new Array(blankCount).fill(null));
-    setAvailableOptions(item.options.map((opt, i) => ({ id: `opt-${i}`, text: opt })));
+    // Initialize options with stable IDs
+    setOptions(item.options.map((opt, i) => ({ 
+      id: `opt-${i}`, 
+      text: opt, 
+      isUsed: false 
+    })));
     setIsCorrect(null);
     setIsProcessing(false);
   }, [item, blankCount]);
@@ -152,32 +181,43 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
     if (sourceIndex === targetIndex) return;
 
     const newSlots = [...filledSlots];
-    let newOptions = [...availableOptions];
+    const targetText = newSlots[targetIndex]; // What's currently in the target slot?
+    let newOptions = [...options];
 
     const sourceText = dragItem.text;
-    const targetText = newSlots[targetIndex]; // What's currently in the target slot?
 
-    // 1. Remove from Source
+    // 1. Update Options Usage
+    
+    // If dragging from pool, mark that option as used
     if (dragItem.origin === 'pool') {
-      newOptions = newOptions.filter(o => o.id !== dragItem.id);
-    } else if (sourceIndex !== undefined) {
-      // If source was a slot, it receives the targetText (Swap)
-      // If targetText is null, source becomes empty (Move)
+      const optIdx = newOptions.findIndex(o => o.id === dragItem.id);
+      if (optIdx !== -1) {
+        newOptions[optIdx] = { ...newOptions[optIdx], isUsed: true };
+      }
+    } 
+
+    // If target slot was occupied, we need to return that word to the pool (mark as unused)
+    if (targetText) {
+      // Find a used option with matching text to free up
+      const freeIdx = newOptions.findIndex(o => o.text === targetText && o.isUsed);
+      if (freeIdx !== -1) {
+        newOptions[freeIdx] = { ...newOptions[freeIdx], isUsed: false };
+      }
+    }
+
+    // 2. Update Slots
+    
+    // If source was a slot, it receives the targetText (Swap)
+    if (sourceIndex !== undefined) {
       newSlots[sourceIndex] = targetText; 
     }
 
-    // 2. Update Target
-    // If source was pool and we are replacing a filled slot, return old value to pool
-    if (dragItem.origin === 'pool' && targetText) {
-      newOptions.push({ id: `returned-${Date.now()}`, text: targetText });
-    }
-    
     // Set target to new value
     newSlots[targetIndex] = sourceText;
 
     // 3. Update State
     setFilledSlots(newSlots);
-    setAvailableOptions(newOptions);
+    setOptions(newOptions);
 
     // 4. Check for Completion
     if (newSlots.every(s => s !== null)) {
@@ -199,11 +239,21 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
     if (isProcessing || !filledSlots[index]) return;
     const text = filledSlots[index]!;
     
+    // Mark one instance of 'text' as unused in options
+    setOptions(prev => {
+      const idx = prev.findIndex(o => o.text === text && o.isUsed);
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], isUsed: false };
+        return next;
+      }
+      return prev;
+    });
+
     const newSlots = [...filledSlots];
     newSlots[index] = null;
     
     setFilledSlots(newSlots);
-    setAvailableOptions(prev => [...prev, { id: `returned-${Date.now()}`, text }]);
   };
 
   const checkAnswer = (finalSlots: (string | null)[]) => {
@@ -223,7 +273,8 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
       setTimeout(() => {
         setIsCorrect(null);
         setFilledSlots(new Array(blankCount).fill(null));
-        setAvailableOptions(item.options.map((opt, i) => ({ id: `opt-${i}`, text: opt })));
+        // Reset all options to unused
+        setOptions(prev => prev.map(o => ({ ...o, isUsed: false })));
         setIsProcessing(false);
       }, 1200);
     }
@@ -278,15 +329,16 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
         `}
       >
         <div className={`text-xs font-bold mb-3 uppercase tracking-wider text-center ${isOverPool ? 'text-red-400' : 'text-gray-400'}`}>
-          {isOverPool ? '松手移除' : (availableOptions.length > 0 ? '拖拽或点击填空' : '...')}
+          {isOverPool ? '松手移除' : '拖拽或点击填空'}
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          {availableOptions.map((opt) => (
+          {options.map((opt) => (
             <DraggableOption
               key={opt.id}
               id={opt.id}
               text={opt.text}
               disabled={isProcessing}
+              isUsed={opt.isUsed}
               onSelect={() => handleDirectFill(opt.text, opt.id)}
             />
           ))}
