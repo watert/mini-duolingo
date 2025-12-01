@@ -1,143 +1,155 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  DndContext, 
+  DragOverlay, 
+  useDraggable, 
+  useDroppable, 
+  DragStartEvent, 
+  DragEndEvent,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  TouchSensor
+} from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import { FillBlanksViewProps } from '../types';
 
-const ItemTypes = {
-  WORD: 'word',
-};
-
-// Data structure for the item being dragged
-interface DragItem {
+// Data types for DnD
+interface DragItemData {
   id: string;
   text: string;
   origin: 'pool' | 'slot';
-  index?: number; // Only present if origin is 'slot'
+  index?: number; // Only if origin is slot
 }
-
-// --- Sub-components for DnD ---
-
-interface DraggableOptionProps {
-  id: string;
-  text: string;
-  disabled: boolean;
-  isUsed: boolean;
-  onSelect: () => void; // Fallback for click
-}
-
-const DraggableOption: React.FC<DraggableOptionProps> = ({ id, text, disabled, isUsed, onSelect }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: ItemTypes.WORD,
-    item: { id, text, origin: 'pool' } as DragItem,
-    canDrag: !disabled && !isUsed,
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }), [id, text, disabled, isUsed]);
-
-  drag(ref);
-
-  // Placeholder state for used items
-  if (isUsed) {
-    return (
-      <div 
-        className="px-4 py-3 border-2 border-transparent text-lg font-bold opacity-0 pointer-events-none select-none"
-        aria-hidden="true"
-      >
-        {text}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={ref}
-      onClick={!disabled ? onSelect : undefined}
-      style={{ opacity: isDragging ? 0.5 : 1 }}
-      className={`
-        px-4 py-3 bg-white border-2 border-b-4 rounded-xl text-lg font-bold transition-all shadow-sm touch-manipulation select-none
-        ${disabled 
-          ? 'border-gray-100 text-gray-300 cursor-default border-b-2 transform-none' 
-          : 'border-gray-200 text-gray-700 active:border-b-2 active:translate-y-[2px] cursor-grab active:cursor-grabbing'
-        }
-      `}
-    >
-      {text}
-    </div>
-  );
-};
-
-interface DroppableSlotProps {
-  index: number;
-  text: string | null;
-  isCorrect: boolean | null;
-  onDrop: (item: DragItem) => void;
-  onClick: () => void;
-}
-
-const DroppableSlot: React.FC<DroppableSlotProps> = ({ index, text, isCorrect, onDrop, onClick }) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Make slot droppable (Target)
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: ItemTypes.WORD,
-    drop: (item: DragItem) => onDrop(item),
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-    }),
-  }), [text, onDrop]);
-
-  // Make slot draggable (Source) if it has text
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: ItemTypes.WORD,
-    item: { id: `slot-${index}`, text: text || '', origin: 'slot', index } as DragItem,
-    canDrag: !!text,
-    end: (item, monitor) => {
-      // Support dragging outside to remove
-      if (!monitor.didDrop()) {
-        onClick();
-      }
-    },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }), [text, index, onClick]);
-
-  // Initialize drag and drop refs
-  drag(drop(ref));
-
-  let statusClass = 'border-gray-300 bg-gray-50';
-  
-  if (isOver) {
-    statusClass = 'border-blue-400 bg-blue-100 scale-105';
-  } else if (text) {
-    if (isCorrect === false) statusClass = 'border-red-400 bg-red-50 text-red-600 animate-shake';
-    else if (isCorrect === true) statusClass = 'border-green-400 bg-green-50 text-green-600';
-    else statusClass = 'border-blue-400 bg-blue-50 text-blue-600 cursor-grab active:cursor-grabbing';
-  }
-
-  return (
-    <div
-      ref={ref}
-      onClick={text ? onClick : undefined}
-      style={{ opacity: isDragging ? 0.5 : 1 }}
-      className={`
-        min-w-[80px] h-[48px] px-3 mx-1 border-b-4 rounded-lg transition-all text-xl font-bold flex items-center justify-center select-none
-        ${statusClass}
-      `}
-    >
-      {text}
-    </div>
-  );
-};
-
-// --- Main Component ---
 
 interface OptionState {
   id: string;
   text: string;
   isUsed: boolean;
 }
+
+// --- Visual Components ---
+
+const WordChip: React.FC<{
+  text: string;
+  isDragging?: boolean;
+  status?: 'idle' | 'used' | 'correct' | 'error' | 'selected';
+  disabled?: boolean;
+  onClick?: () => void;
+  style?: React.CSSProperties;
+}> = ({ text, isDragging, status = 'idle', disabled, onClick, style }) => {
+  let classes = "px-4 py-3 rounded-xl text-lg font-bold transition-all shadow-sm touch-manipulation select-none border-2 ";
+  
+  if (status === 'used') {
+    classes += "border-transparent opacity-0 pointer-events-none";
+  } else if (disabled) {
+    classes += "border-gray-100 text-gray-300 cursor-default border-b-2 bg-white";
+  } else if (status === 'correct') {
+    classes += "border-green-400 bg-green-50 text-green-600 border-b-4";
+  } else if (status === 'error') {
+    classes += "border-red-400 bg-red-50 text-red-600 border-b-4 animate-shake";
+  } else if (status === 'selected') {
+    classes += "border-blue-400 bg-blue-50 text-blue-600 border-b-4";
+  } else {
+    // Idle / Draggable
+    classes += "bg-white border-gray-200 border-b-4 text-gray-700 active:border-b-2 active:translate-y-[2px] cursor-grab active:cursor-grabbing";
+  }
+
+  if (isDragging) {
+    classes += " opacity-50";
+  }
+
+  return (
+    <div 
+      style={style}
+      className={classes}
+      onClick={!disabled && status !== 'used' ? onClick : undefined}
+    >
+      {text}
+    </div>
+  );
+};
+
+// --- Draggable Wrapper ---
+
+const DraggableWord: React.FC<{
+  id: string;
+  text: string;
+  origin: 'pool' | 'slot';
+  index?: number;
+  disabled: boolean;
+  isUsed?: boolean;
+  onTap: () => void;
+}> = ({ id, text, origin, index, disabled, isUsed, onTap }) => {
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    id: id,
+    data: { id, text, origin, index } as DragItemData,
+    disabled: disabled || isUsed,
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      <WordChip 
+        text={text} 
+        isDragging={isDragging} 
+        status={isUsed ? 'used' : 'idle'} 
+        disabled={disabled}
+        onClick={onTap}
+      />
+    </div>
+  );
+};
+
+// --- Droppable Slot ---
+
+const DroppableSlot: React.FC<{
+  index: number;
+  text: string | null;
+  isCorrect: boolean | null;
+  onClear: () => void;
+  disabled: boolean;
+}> = ({ index, text, isCorrect, onClear, disabled }) => {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `slot-${index}`,
+  });
+
+  let statusClass = 'border-gray-300 bg-gray-50';
+  if (isOver && !disabled) {
+    statusClass = 'border-blue-400 bg-blue-100 scale-105';
+  } else if (text) {
+     // If text exists, it's occupied. The DraggableWord inside determines visual mostly, 
+     // but we handle success/error container styles here.
+     if (isCorrect === true) statusClass = 'border-green-400 bg-green-50';
+     else if (isCorrect === false) statusClass = 'border-red-400 bg-red-50';
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        min-w-[80px] h-[56px] px-1 mx-1 border-b-4 rounded-lg transition-all flex items-center justify-center select-none z-0
+        ${statusClass}
+      `}
+    >
+      {text ? (
+        <DraggableWord
+          id={`slot-item-${index}`}
+          text={text}
+          origin="slot"
+          index={index}
+          disabled={disabled}
+          onTap={onClear}
+        />
+      ) : null}
+    </div>
+  );
+};
+
+// --- Main Component ---
 
 export const FillBlanksView: React.FC<FillBlanksViewProps> = ({ 
   item, 
@@ -146,12 +158,23 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
   onNext 
 }) => {
   const [filledSlots, setFilledSlots] = useState<(string | null)[]>([]);
-  // Store all options with their usage state
   const [options, setOptions] = useState<OptionState[]>([]);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeDragItem, setActiveDragItem] = useState<DragItemData | null>(null);
 
-  // Parse question to find segments
+  // Sensors configuration
+  const sensors = useSensors(
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, {
+      // Require movement to trigger drag, allowing click events to pass through for Tap logic
+      activationConstraint: {
+        distance: 8, 
+      },
+    })
+  );
+
+  // Parse segments
   const segments = useMemo(() => {
     return item.question.split('__');
   }, [item.question]);
@@ -160,7 +183,6 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
 
   useEffect(() => {
     setFilledSlots(new Array(blankCount).fill(null));
-    // Initialize options with stable IDs
     setOptions(item.options.map((opt, i) => ({ 
       id: `opt-${i}`, 
       text: opt, 
@@ -170,76 +192,72 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
     setIsProcessing(false);
   }, [item, blankCount]);
 
-  // Core Logic for Drop
-  const handleDrop = (dragItem: DragItem, targetIndex: number) => {
-    if (isProcessing) return;
-    
-    // Determine Source
-    const sourceIndex = dragItem.origin === 'slot' ? dragItem.index : undefined;
-    
-    // If dropping on itself, ignore
-    if (sourceIndex === targetIndex) return;
+  // --- Logic ---
 
+  const checkAnswer = (finalSlots: (string | null)[]) => {
+    setIsProcessing(true);
+    const correct = finalSlots.every((slot, i) => slot === item.answers[i]);
+    setIsCorrect(correct);
+
+    if (correct) {
+      onSuccess(item);
+      setTimeout(() => {
+        onNext();
+      }, 1000);
+    } else {
+      onError(item);
+      setTimeout(() => {
+        setIsCorrect(null);
+        setFilledSlots(new Array(blankCount).fill(null));
+        setOptions(prev => prev.map(o => ({ ...o, isUsed: false })));
+        setIsProcessing(false);
+      }, 1200);
+    }
+  };
+
+  const handleFill = (text: string, sourceId: string, origin: 'pool' | 'slot', sourceIndex?: number, targetIndex?: number) => {
+    if (targetIndex === undefined) return; // Should not happen if logic is correct
+    
     const newSlots = [...filledSlots];
-    const targetText = newSlots[targetIndex]; // What's currently in the target slot?
+    const targetText = newSlots[targetIndex];
     let newOptions = [...options];
 
-    const sourceText = dragItem.text;
-
-    // 1. Update Options Usage
-    
-    // If dragging from pool, mark that option as used
-    if (dragItem.origin === 'pool') {
-      const optIdx = newOptions.findIndex(o => o.id === dragItem.id);
+    // 1. Mark Option as Used (if from pool)
+    if (origin === 'pool') {
+      const optIdx = newOptions.findIndex(o => o.id === sourceId);
       if (optIdx !== -1) {
         newOptions[optIdx] = { ...newOptions[optIdx], isUsed: true };
       }
-    } 
+    }
 
-    // If target slot was occupied, we need to return that word to the pool (mark as unused)
+    // 2. Return target slot text to pool (if occupied)
     if (targetText) {
-      // Find a used option with matching text to free up
       const freeIdx = newOptions.findIndex(o => o.text === targetText && o.isUsed);
       if (freeIdx !== -1) {
         newOptions[freeIdx] = { ...newOptions[freeIdx], isUsed: false };
       }
     }
 
-    // 2. Update Slots
-    
-    // If source was a slot, it receives the targetText (Swap)
-    if (sourceIndex !== undefined) {
-      newSlots[sourceIndex] = targetText; 
+    // 3. Update Slots
+    if (sourceIndex !== undefined && origin === 'slot') {
+      // Swap logic: Put target text into source slot
+      newSlots[sourceIndex] = targetText;
     }
+    
+    newSlots[targetIndex] = text;
 
-    // Set target to new value
-    newSlots[targetIndex] = sourceText;
-
-    // 3. Update State
     setFilledSlots(newSlots);
     setOptions(newOptions);
 
-    // 4. Check for Completion
     if (newSlots.every(s => s !== null)) {
-       checkAnswer(newSlots);
+      checkAnswer(newSlots);
     }
   };
 
-  // Click to Clear or Select
-  const handleDirectFill = (text: string, sourceId: string) => {
-    if (isProcessing) return;
-    // Find first empty slot
-    const targetIndex = filledSlots.findIndex(s => s === null);
-    if (targetIndex !== -1) {
-       handleDrop({ id: sourceId, text, origin: 'pool' }, targetIndex);
-    }
-  };
-
-  const handleSlotClear = (index: number) => {
+  const handleClear = (index: number) => {
     if (isProcessing || !filledSlots[index]) return;
     const text = filledSlots[index]!;
     
-    // Mark one instance of 'text' as unused in options
     setOptions(prev => {
       const idx = prev.findIndex(o => o.text === text && o.isUsed);
       if (idx !== -1) {
@@ -252,54 +270,70 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
 
     const newSlots = [...filledSlots];
     newSlots[index] = null;
-    
     setFilledSlots(newSlots);
   };
 
-  const checkAnswer = (finalSlots: (string | null)[]) => {
-    setIsProcessing(true);
-    
-    const correct = finalSlots.every((slot, i) => slot === item.answers[i]);
-    setIsCorrect(correct);
+  // --- DnD Event Handlers ---
 
-    if (correct) {
-      onSuccess(item);
-      setTimeout(() => {
-        onNext();
-      }, 1000);
-    } else {
-      onError(item);
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragItem(event.active.data.current as DragItemData);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
+
+    if (!over) {
+      // Dropped outside - if from slot, clear it
+      if (active.data.current?.origin === 'slot') {
+        handleClear(active.data.current.index);
+      }
+      return;
+    }
+
+    const source = active.data.current as DragItemData;
+    const targetId = over.id as string;
+
+    // Dropped back to pool
+    if (targetId === 'pool') {
+      if (source.origin === 'slot') {
+        handleClear(source.index!);
+      }
+      return;
+    }
+
+    // Dropped on a slot
+    if (targetId.startsWith('slot-')) {
+      const targetIndex = parseInt(targetId.replace('slot-', ''), 10);
       
-      setTimeout(() => {
-        setIsCorrect(null);
-        setFilledSlots(new Array(blankCount).fill(null));
-        // Reset all options to unused
-        setOptions(prev => prev.map(o => ({ ...o, isUsed: false })));
-        setIsProcessing(false);
-      }, 1200);
+      // If dropped on self, ignore
+      if (source.origin === 'slot' && source.index === targetIndex) return;
+
+      handleFill(source.text, source.id, source.origin, source.index, targetIndex);
     }
   };
 
-  const poolRef = useRef<HTMLDivElement>(null);
-  // Drop Target for the Pool (Dragging a slot back to pool clears it)
-  const [{ isOverPool }, dropToPool] = useDrop(() => ({
-    accept: ItemTypes.WORD,
-    drop: (item: DragItem) => {
-      if (item.origin === 'slot' && item.index !== undefined) {
-        handleSlotClear(item.index);
-      }
-    },
-    collect: (m) => ({ isOverPool: !!m.isOver() })
-  }));
-
-  dropToPool(poolRef);
+  // Tap handlers (Click to fill/clear)
+  const handleOptionTap = (text: string, id: string) => {
+    if (isProcessing) return;
+    // Find first empty slot
+    const emptyIndex = filledSlots.findIndex(s => s === null);
+    if (emptyIndex !== -1) {
+      handleFill(text, id, 'pool', undefined, emptyIndex);
+    }
+  };
 
   return (
-    <div className="w-full max-w-sm flex flex-col items-center animate-fade-in h-full">
-      
-      {/* Question Area */}
-      <div className="w-full flex-1 bg-white border-2 border-b-4 border-gray-200 rounded-3xl p-6 mb-4 shadow-sm flex flex-col justify-center">
-          <div className="flex flex-wrap items-center justify-center gap-y-4">
+    <DndContext 
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="w-full max-w-sm flex flex-col items-center animate-fade-in h-full">
+        
+        {/* Question Area */}
+        <div className="w-full flex-1 bg-white border-2 border-b-4 border-gray-200 rounded-3xl p-6 mb-4 shadow-sm flex flex-col justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-y-4 leading-loose">
             {segments.map((seg, i) => (
               <React.Fragment key={i}>
                 {/* Text Segment */}
@@ -311,38 +345,66 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
                     index={i}
                     text={filledSlots[i]}
                     isCorrect={isCorrect}
-                    onDrop={(item) => handleDrop(item, i)}
-                    onClick={() => handleSlotClear(i)}
+                    onClear={() => handleClear(i)}
+                    disabled={isProcessing}
                   />
                 )}
               </React.Fragment>
             ))}
           </div>
+        </div>
+
+        {/* Options Pool */}
+        <PoolArea options={options} isProcessing={isProcessing} onOptionTap={handleOptionTap} />
+
       </div>
 
-      {/* Options Pool */}
-      <div 
-        ref={poolRef}
-        className={`
-          w-full min-h-[160px] rounded-2xl p-4 border transition-colors
-          ${isOverPool ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'}
-        `}
-      >
-        <div className={`text-xs font-bold mb-3 uppercase tracking-wider text-center ${isOverPool ? 'text-red-400' : 'text-gray-400'}`}>
-          {isOverPool ? '松手移除' : '拖拽或点击填空'}
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
-          {options.map((opt) => (
-            <DraggableOption
-              key={opt.id}
-              id={opt.id}
-              text={opt.text}
-              disabled={isProcessing}
-              isUsed={opt.isUsed}
-              onSelect={() => handleDirectFill(opt.text, opt.id)}
-            />
-          ))}
-        </div>
+      <DragOverlay>
+        {activeDragItem ? (
+          <WordChip 
+            text={activeDragItem.text} 
+            status="selected"
+            style={{ cursor: 'grabbing' }}
+          />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+};
+
+// Extracted Pool Component to use useDroppable cleanly
+const PoolArea: React.FC<{
+  options: OptionState[];
+  isProcessing: boolean;
+  onOptionTap: (text: string, id: string) => void;
+}> = ({ options, isProcessing, onOptionTap }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'pool',
+  });
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`
+        w-full min-h-[160px] rounded-2xl p-4 border transition-colors
+        ${isOver ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'}
+      `}
+    >
+      <div className={`text-xs font-bold mb-3 uppercase tracking-wider text-center ${isOver ? 'text-red-400' : 'text-gray-400'}`}>
+        {isOver ? '松手移除' : '拖拽或点击填空'}
+      </div>
+      <div className="flex flex-wrap justify-center gap-3">
+        {options.map((opt) => (
+          <DraggableWord
+            key={opt.id}
+            id={opt.id}
+            text={opt.text}
+            origin="pool"
+            disabled={isProcessing}
+            isUsed={opt.isUsed}
+            onTap={() => onOptionTap(opt.text, opt.id)}
+          />
+        ))}
       </div>
     </div>
   );

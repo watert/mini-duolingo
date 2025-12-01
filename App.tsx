@@ -1,8 +1,5 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { CourseSelection } from './components/CourseSelection';
 import { GameEngine } from './components/GameEngine';
 import { HistoryList } from './components/HistoryList';
@@ -10,7 +7,7 @@ import { SessionReport } from './components/SessionReport';
 
 export default function App() {
   return (
-    <DndProvider backend={HTML5Backend}>
+    <>
       {/* changed min-h-screen to h-[100dvh] to fix mobile browser scroll issues */}
       <div className="h-[100dvh] w-full bg-gray-100 font-sans text-gray-900 flex justify-center overflow-hidden">
         {/* Mobile container simulation */}
@@ -54,6 +51,6 @@ export default function App() {
           }
         `}</style>
       </div>
-    </DndProvider>
+    </>
   );
 }
