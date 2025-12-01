@@ -20,18 +20,35 @@ export const MatchView: React.FC<MatchViewProps> = ({ item, onSuccess, onError, 
     if (isProcessing) return;
 
     const clickedCard = cards.find(c => c.id === clickedId);
-    if (!clickedCard || clickedCard.status === 'matched' || clickedCard.status === 'selected') return;
+    
+    // Ignore invalid clicks or clicks on already matched items
+    if (!clickedCard || clickedCard.status === 'matched') return;
 
-    // 1. First Selection
+    // 1. Handle Deselection (Clicking the currently selected card)
+    if (selectedCardId === clickedId) {
+      setSelectedCardId(null);
+      setCards(prev => prev.map(c => c.id === clickedId ? { ...c, status: 'idle' } : c));
+      return;
+    }
+
+    // Ignore clicks on other selected items (though logic below handles single selection flow)
+    if (clickedCard.status === 'selected') return;
+
+    // 2. First Selection
     if (!selectedCardId) {
       setSelectedCardId(clickedId);
       setCards(prev => prev.map(c => c.id === clickedId ? { ...c, status: 'selected' } : c));
       return;
     }
 
-    // 2. Second Selection
+    // 3. Second Selection
     const firstCard = cards.find(c => c.id === selectedCardId);
     if (!firstCard) return;
+
+    // Constraint: Prevent selecting item from same column (same type)
+    if (firstCard.type === clickedCard.type) {
+      return;
+    }
 
     setIsProcessing(true);
     
