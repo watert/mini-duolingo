@@ -21,13 +21,11 @@ interface DragItemData {
   origin: 'pool' | 'slot';
   index?: number; // Only if origin is slot
 }
-
 interface OptionState {
   id: string;
   text: string;
   isUsed: boolean;
 }
-
 // --- Visual Components ---
 
 const WordChip: React.FC<{
@@ -92,13 +90,18 @@ const DraggableWord: React.FC<{
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...attributes}
+      {...listeners}
+    >
       <WordChip 
         text={text} 
         isDragging={isDragging} 
         status={isUsed ? 'used' : 'idle'} 
         disabled={disabled}
-        onClick={onTap}
+        onClick={!disabled && !isUsed ? onTap : undefined}
       />
     </div>
   );
@@ -165,7 +168,12 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
 
   // Sensors configuration
   const sensors = useSensors(
-    useSensor(MouseSensor),
+    useSensor(MouseSensor, {
+      // Require movement to trigger drag, allowing click events to pass through for Tap logic
+      activationConstraint: {
+        distance: 8, 
+      },
+    }),
     useSensor(TouchSensor, {
       // Require movement to trigger drag, allowing click events to pass through for Tap logic
       activationConstraint: {
@@ -216,6 +224,7 @@ export const FillBlanksView: React.FC<FillBlanksViewProps> = ({
   };
 
   const handleFill = (text: string, sourceId: string, origin: 'pool' | 'slot', sourceIndex?: number, targetIndex?: number) => {
+    // 修复：检查 targetIndex 是否为 undefined，而不是是否为 falsy
     if (targetIndex === undefined) return; // Should not happen if logic is correct
     
     const newSlots = [...filledSlots];

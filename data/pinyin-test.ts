@@ -27,9 +27,9 @@ export const mixedTest: PinyinItem[] = [
   },
   {
     type: "FILL",
-    question: "天 __ 地 __",
-    answers: ["上", "下"],
-    options: ["上", "下", "左", "右"],
+    question: "天地 __ 宇宙 __",
+    answers: ["玄黄", "洪荒"],
+    options: ["玄黄", "洪荒", "白黄", "刍狗"],
     level: 1
   }
 ];
